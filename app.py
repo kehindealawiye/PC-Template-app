@@ -89,25 +89,35 @@ for group, fields in field_structure.items():
             for proj in range(1, project_count + 1):
                 key = f"{row}_P{proj}"
                 label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
+
                 if label == "Address line 2":
                     client_ministry = all_inputs.get(f"3_P{proj}", "")
                     all_inputs[key] = st.text_input(label_suffix, value=client_ministry, key=key)
                 elif label in custom_dropdowns:
                     all_inputs[key] = st.selectbox(label_suffix, custom_dropdowns[label], key=key)
-                elif row == "18":
-                    amount = calculate_amount_due(all_inputs, proj)
-                    all_inputs[key] = f"{amount:,.2f}"
-                    st.info(f"Calculated Amount Due: ₦{all_inputs[key]}")
-                elif row == "19":
-                    amount = calculate_amount_due(all_inputs, proj)
-                    all_inputs[key] = amount_in_words_naira(amount)
-                    st.write(f"Amount in Words: {all_inputs[key]}")
                 else:
                     all_inputs[key] = st.text_input(label_suffix, key=key)
 
+# VAT fields - make sure available early
 for proj in range(1, project_count + 1):
-    key = f"vat_P{proj}"
-    all_inputs[key] = st.text_input(f"VAT % – Project {proj}", value="7.5", key=key)
+    vat_key = f"vat_P{proj}"
+    all_inputs[vat_key] = st.number_input(f"VAT % – Project {proj}", value=7.5, step=0.1, key=vat_key)
+
+# ⚡ Now calculate the amount live
+for proj in range(1, project_count + 1):
+    try:
+        amount_due = calculate_amount_due(all_inputs, proj)
+        amount_words = amount_in_words_naira(amount_due)
+
+        # Save into all_inputs so it can be used when generating Excel later
+        all_inputs[f"18_P{proj}"] = f"{amount_due:,.2f}"
+        all_inputs[f"19_P{proj}"] = amount_words
+
+        # Display inside form
+        st.success(f"Project {proj}: Calculated Amount Due: ₦{amount_due:,.2f}")
+        st.info(f"Amount in Words: {amount_words}")
+    except Exception as e:
+        st.warning(f"Error calculating for Project {proj}: {e}")
 
 contractor = all_inputs.get("4_P1", "Contractor")
 project_name = all_inputs.get("1_P1", "FilledTemplate")
