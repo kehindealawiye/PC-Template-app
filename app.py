@@ -48,13 +48,14 @@ def calculate_amount_due(inputs, proj):
         val = str(inputs.get(f"{row}_P{proj}", "0")).replace(",", "").replace("%", "").strip().lower()
         return 0.0 if val in ["", "nil"] else float(val)
 
-    contract_sum = get("9")
-    advance_payment_pct = get("11") / 100
-    work_completed = get("12")
-    retention_pct = get("13") / 100
-    previous_payment = get("14")
-    advance_refund_pct = get("15") / 100
-    vat_pct = get("16") / 100
+    contract_sum = get("10")
+    revised_contract_sum = get("11")
+    advance_payment_pct = get("12") / 100
+    work_completed = get("13")
+    retention_pct = get("14") / 100
+    previous_payment = get("15")
+    advance_refund_pct = get("16") / 100
+    vat_pct = get("17") / 100
 
     advance_payment = contract_sum * advance_payment_pct
     retention = work_completed * retention_pct
