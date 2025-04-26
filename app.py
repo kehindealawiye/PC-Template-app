@@ -45,22 +45,25 @@ def write_to_details(ws, data_dict, column_map):
 
 def calculate_amount_due(inputs, proj):
     def get(row):
-        val = str(inputs.get(f"{row}_P{proj}", "0")).replace(",", "").replace("%", "").strip()
-        return float(val) if val else 0.0
+        val = str(inputs.get(f"{row}_P{proj}", "0")).replace(",", "").replace("%", "").strip().lower()
+        return 0.0 if val in ["", "nil"] else float(val)
 
     contract_sum = get("10")
-    advance_pct = get("11") / 100
-    work_completed = get("12")
-    retention_pct = get("13") / 100
-    previous_payment = get("14")
-    advance_refund_pct = get("15") / 100
-    vat_pct = get("16") / 100
+    advance_payment_pct = get("12") / 100
+    work_completed = get("13")
+    retention_pct = get("14") / 100
+    previous_payment = get("15")
+    advance_refund_pct = get("16") / 100
+    vat_pct = get(f"vat_P{proj}") / 100
 
-    advance_payment = advance_pct * contract_sum
-    base = work_completed - (retention_pct * work_completed)
-    vat = vat_pct * base
-    advance_refund = advance_refund_pct * advance_payment
-    amount_due = (base + vat) - advance_refund - previous_payment
+    advance_payment = contract_sum * advance_payment_pct
+    retention = work_completed * retention_pct
+    total_net_payment = work_completed - retention
+    vat = total_net_payment * vat_pct
+    total_net_amount = total_net_payment + vat
+    advance_refund_amount = advance_refund_pct * advance_payment
+    amount_due = total_net_amount - advance_refund_amount - previous_payment
+
     return amount_due
 
 def amount_in_words_naira(amount):
@@ -72,21 +75,8 @@ def amount_in_words_naira(amount):
     return words.replace("-", " ")
 
 st.set_page_config(page_title="Prepayment Form", layout="wide")
-st.markdown("""
-    <style>
-        body { background-color: #f5f7fa; }
-        .stApp { padding: 2rem; }
-        .st-expander {
-            background-color: #ffffff !important;
-            border: 1px solid #d0d0d0 !important;
-            margin-bottom: 20px !important;
-            border-radius: 8px !important;
-        }
-        h1 { color: #1a237e; }
-    </style>
-""", unsafe_allow_html=True)
-
 st.title("Prepayment Certificate Filler")
+
 project_count = st.selectbox("Number of Projects", [1, 2, 3])
 template_path = template_paths[project_count]
 column_map = project_columns[project_count]
@@ -116,8 +106,8 @@ for group, fields in field_structure.items():
                     all_inputs[key] = st.text_input(label_suffix, key=key)
 
 for proj in range(1, project_count + 1):
-    key = f"link_P{proj}"
-    all_inputs[key] = st.text_input(f"Link to Inspection Pictures – Project {proj}", value="https://medpicturesapp.streamlit.app/", key=key)
+    key = f"vat_P{proj}"
+    all_inputs[key] = st.text_input(f"VAT % – Project {proj}", value="7.5", key=key)
 
 contractor = all_inputs.get("4_P1", "Contractor")
 project_name = all_inputs.get("1_P1", "FilledTemplate")
