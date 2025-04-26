@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import json
 import io
+import csv
 from openpyxl import load_workbook
 from num2words import num2words
 
@@ -26,8 +27,9 @@ custom_dropdowns = {
 }
 
 def load_field_structure():
-    with open("Field Structure.csv") as f:
-        return csv.load(f)
+    with open("Field Structure.csv", newline='', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        return list(reader)
 
 def load_template(project_count):
     return load_workbook(template_paths[project_count])
