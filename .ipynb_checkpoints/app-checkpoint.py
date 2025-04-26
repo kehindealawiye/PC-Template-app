@@ -28,7 +28,7 @@ custom_dropdowns = {
 }
 
 def load_field_structure():
-    df = pd.read_csv("Grouped_Field_Structure_Clean.csv")
+    df = pd.read_csv("Field Structure.csv")
     grouped = {}
     for _, row in df.iterrows():
         group = row['Group']
