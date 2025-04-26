@@ -1,11 +1,9 @@
-
 import streamlit as st
 import pandas as pd
 import io
 from openpyxl import load_workbook
 from num2words import num2words
 
-# Template paths and project column map
 template_paths = {
     1: "PC Template-1.xlsx",
     2: "PC Template 2.xlsx",
@@ -18,7 +16,6 @@ project_columns = {
 }
 details_sheet = "DETAILS"
 
-# User-defined dropdowns
 custom_dropdowns = {
     "Payment stage:": ["Stage Payment", "Final Payment", "Retention"],
     "Percentage of Advance payment? (as specified in the award letter)": ["0%", "25%", "40%", "50%", "60%", "70%"],
@@ -28,7 +25,7 @@ custom_dropdowns = {
 }
 
 def load_field_structure():
-    df = pd.read_csv("Field Structure.csv")
+    df = pd.read_csv("Grouped_Field_Structure_Clean.csv")
     grouped = {}
     for _, row in df.iterrows():
         group = row['Group']
@@ -45,7 +42,17 @@ def write_to_details(ws, data_dict, column_map):
         for row_idx, value in entries.items():
             ws[f"{col}{int(row_idx)}"] = value
 
-def get_calculated_value(advance_payment, advance_refund_pct, work_completed, retention_pct, vat_pct, previous_payment):
+def calculate_amount_due(inputs, proj):
+    def get(row): return float(str(inputs.get(f"{row}_P{proj}", "0")).replace(",", "").replace("%", ""))
+    contract_sum = get("10")
+    advance_pct = get("11") / 100
+    work_completed = get("12")
+    retention_pct = get("13") / 100
+    previous_payment = get("14")
+    advance_refund_pct = get("15") / 100
+    vat_pct = get("16") / 100
+
+    advance_payment = advance_pct * contract_sum
     base = work_completed - (retention_pct * work_completed)
     vat_amount = vat_pct * base
     advance_deduction = advance_refund_pct * advance_payment
@@ -59,7 +66,7 @@ def amount_in_words_naira(amount):
         words += f", {num2words(kobo, lang='en')} kobo"
     return words.replace("-", " ")
 
-# --- UI Styling ---
+# UI
 st.set_page_config(page_title="Prepayment Form", layout="wide")
 st.markdown("""
     <style>
@@ -71,23 +78,18 @@ st.markdown("""
             margin-bottom: 20px !important;
             border-radius: 8px !important;
         }
-        .st-expander .css-1d391kg {
-            background-color: #f0f4f8 !important;
-        }
         h1 { color: #1a237e; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- Main App Logic ---
 st.title("Prepayment Certificate Filler")
-
 project_count = st.selectbox("Number of Projects", [1, 2, 3])
 template_path = template_paths[project_count]
 column_map = project_columns[project_count]
 field_structure = load_field_structure()
 all_inputs = {}
 
-# Form fields per group
+# Form
 for group, fields in field_structure.items():
     with st.expander(group, expanded=True):
         for row, label, _ in fields:
@@ -99,10 +101,18 @@ for group, fields in field_structure.items():
                     all_inputs[key] = st.text_input(label_suffix, value=client_ministry, key=key)
                 elif label in custom_dropdowns:
                     all_inputs[key] = st.selectbox(label_suffix, custom_dropdowns[label], key=key)
+                elif row == "18":
+                    amount = calculate_amount_due(all_inputs, proj)
+                    all_inputs[key] = f"{amount:,.2f}"
+                    st.info(f"Calculated Amount Due: ₦{all_inputs[key]}")
+                elif row == "19":
+                    amount = calculate_amount_due(all_inputs, proj)
+                    all_inputs[key] = amount_in_words_naira(amount)
+                    st.write(f"Amount in Words: {all_inputs[key]}")
                 else:
                     all_inputs[key] = st.text_input(label_suffix, key=key)
 
-# Inspection pictures link
+# Link
 for proj in range(1, project_count + 1):
     key = f"link_P{proj}"
     all_inputs[key] = st.text_input(f"Link to Inspection Pictures – Project {proj}", value="https://medpicturesapp.streamlit.app/", key=key)
@@ -110,7 +120,7 @@ for proj in range(1, project_count + 1):
 contractor = all_inputs.get("4_P1", "Contractor")
 project_name = all_inputs.get("1_P1", "FilledTemplate")
 
-# Excel generation
+# Generate Excel
 if st.button("Generate Excel"):
     wb = load_template(project_count)
     ws = wb[details_sheet]
@@ -131,29 +141,3 @@ if st.button("Generate Excel"):
         file_name=f"{project_name}_by_{contractor}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
-# Calculation preview
-st.subheader("Amount Due Calculation Preview")
-for proj in range(1, project_count + 1):
-    def parse_float(value):
-        try:
-            return float(str(value).replace(",", "").replace("%", ""))
-        except:
-            return 0.0
-
-    work_completed = parse_float(all_inputs.get(f"11_P{proj}", 0))
-    retention_pct = parse_float(all_inputs.get(f"12_P{proj}", "0")) / 100
-    vat_pct = parse_float(all_inputs.get(f"13_P{proj}", "0")) / 100
-    previous_payment = parse_float(all_inputs.get(f"14_P{proj}", 0))
-    advance_refund_pct = parse_float(all_inputs.get(f"15_P{proj}", 0)) / 100
-    advance_payment = parse_float(all_inputs.get(f"9_P{proj}", 0))
-
-    calc_amount = get_calculated_value(
-        advance_payment, advance_refund_pct,
-        work_completed, retention_pct,
-        vat_pct, previous_payment
-    )
-
-    words = amount_in_words_naira(calc_amount)
-    st.info(f"**Project {proj} – Amount Due:** ₦{calc_amount:,.2f}")
-    st.write(f"**Amount in Words:** {words}")
