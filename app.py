@@ -1,115 +1,149 @@
 
 import streamlit as st
 import pandas as pd
+import json
 import io
 from openpyxl import load_workbook
-from docx import Document
+from num2words import num2words
 
-# Template config
+# Project templates and column mapping
 template_paths = {
-    1: "PC Template.xlsx",
+    1: "PC Template-1.xlsx",
     2: "PC Template 2.xlsx",
     3: "PC Template 3.xlsx"
 }
-
-column_map = {
-    1: 'B',
-    2: 'E',
-    3: 'H'
+project_columns = {
+    1: {1: "B"},
+    2: {1: "B", 2: "E"},
+    3: {1: "B", 2: "E", 3: "H"}
 }
+details_sheet = "DETAILS"
 
-def load_labels():
-    df = pd.read_excel(template_paths[1], sheet_name=0, header=None, usecols="A")
-    return df[0].dropna().reset_index(drop=True)
+# --- Helper Functions ---
+def load_field_structure():
+    with open("field_structure.json") as f:
+        return json.load(f)
 
-def load_template(projects):
-    return load_workbook(template_paths[projects])
+def load_template(project_count):
+    return load_workbook(template_paths[project_count])
 
-def get_calculated_value(path, col_letter):
-    wb = load_workbook(path, data_only=True)
-    ws = wb.active
-    return ws[f"{col_letter}18"].value
+def write_to_details(ws, data_dict, column_map):
+    for proj, entries in data_dict.items():
+        col = column_map[proj]
+        for row_idx, value in entries.items():
+            ws[f"{col}{int(row_idx)}"] = value
 
-def update_excel(inputs, projects):
-    wb = load_template(projects)
-    ws = wb.active
-    col = column_map[projects]
-    for idx, value in inputs.items():
-        cell = f"{col}{idx + 1}"
-        ws[cell] = value
+def get_calculated_value(advance_payment, advance_refund_pct, work_completed, retention_pct, vat_pct, previous_payment):
+    base = work_completed - (retention_pct * work_completed)
+    vat_amount = vat_pct * base
+    advance_deduction = advance_refund_pct * advance_payment
+    return base + vat_amount - advance_deduction - previous_payment
+
+def amount_in_words_naira(amount):
+    naira = int(amount)
+    kobo = int(round((amount - naira) * 100))
+    words = f"{num2words(naira, lang='en').capitalize()} naira"
+    if kobo > 0:
+        words += f", {num2words(kobo, lang='en')} kobo"
+    return words.replace("-", " ")
+
+# --- UI Styling ---
+st.set_page_config(page_title="Prepayment Form", layout="wide")
+st.markdown("""
+    <style>
+        body {
+            background-color: #f5f7fa;
+        }
+        .stApp {
+            padding: 2rem;
+        }
+        .css-1d391kg {
+            background-color: #ffffff !important;
+            border: 1px solid #e0e0e0 !important;
+            padding: 1.5rem;
+            border-radius: 10px;
+        }
+        h1 {
+            color: #1a237e;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# --- Main App ---
+st.title("Prepayment Certificate Filler")
+
+project_count = st.selectbox("Number of Projects", [1, 2, 3])
+template_path = template_paths[project_count]
+column_map = project_columns[project_count]
+field_structure = load_field_structure()
+all_inputs = {}
+
+for group, fields in field_structure.items():
+    with st.expander(group, expanded=True):
+        for row, label, options in fields:
+            for proj in range(1, project_count + 1):
+                key = f"{row}_P{proj}"
+                label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
+                if label == "Address line 2":
+                    client_ministry = all_inputs.get(f"3_P{proj}", "")
+                    all_inputs[key] = st.text_input(label_suffix, value=client_ministry, key=key)
+                elif options:
+                    all_inputs[key] = st.selectbox(label_suffix, options, key=key)
+                else:
+                    all_inputs[key] = st.text_input(label_suffix, key=key)
+
+# Add inspection link field
+for proj in range(1, project_count + 1):
+    key = f"link_P{proj}"
+    all_inputs[key] = st.text_input(f"Link to Inspection Pictures – Project {proj}", value="https://medpicturesapp.streamlit.app/", key=key)
+
+contractor = all_inputs.get("4_P1", "Contractor")
+project_name = all_inputs.get("1_P1", "FilledTemplate")
+
+if st.button("Generate Excel"):
+    wb = load_template(project_count)
+    ws = wb[details_sheet]
+    project_data = {p: {} for p in range(1, project_count + 1)}
+    for key, value in all_inputs.items():
+        if "_P" in key:
+            row, proj = key.split("_P")
+            if row.isdigit():
+                project_data[int(proj)][row] = value
+    write_to_details(ws, project_data, column_map)
+
     buffer = io.BytesIO()
     wb.save(buffer)
     buffer.seek(0)
-    return buffer
+    st.success("Excel file is ready.")
+    st.download_button(
+        label="Download Filled Excel",
+        data=buffer,
+        file_name=f"{project_name}_by_{contractor}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
-def export_to_word(sheet_names, template_path):
-    doc = Document()
-    for sheet in sheet_names:
-        doc.add_heading(sheet, level=1)
-        df_sheet = pd.read_excel(template_path, sheet_name=sheet, header=None)
-        for row in df_sheet.itertuples(index=False):
-            line = ' | '.join([str(cell) if pd.notna(cell) else '' for cell in row])
-            doc.add_paragraph(line)
-    buffer = io.BytesIO()
-    doc.save(buffer)
-    buffer.seek(0)
-    return buffer
+# --- Calculation Preview ---
+st.subheader("Amount Due Calculation Preview")
+for proj in range(1, project_count + 1):
+    def parse_float(value):
+        try:
+            return float(str(value).replace(",", "").replace("%", ""))
+        except:
+            return 0.0
 
-def main():
-    st.title("Multi-Project Excel Filler & Word Export")
+    work_completed = parse_float(all_inputs.get(f"11_P{proj}", 0))
+    retention_pct = parse_float(all_inputs.get(f"12_P{proj}", "0")) / 100
+    vat_pct = parse_float(all_inputs.get(f"13_P{proj}", "0")) / 100
+    previous_payment = parse_float(all_inputs.get(f"14_P{proj}", 0))
+    advance_refund_pct = parse_float(all_inputs.get(f"15_P{proj}", 0)) / 100
+    advance_payment = parse_float(all_inputs.get(f"9_P{proj}", 0))
 
-    project_count = st.selectbox("How many projects are you working on?", [1, 2, 3])
-    template_path = template_paths[project_count]
-    col_letter = column_map[project_count]
+    calc_amount = get_calculated_value(
+        advance_payment, advance_refund_pct,
+        work_completed, retention_pct,
+        vat_pct, previous_payment
+    )
 
-    labels = load_labels()
-    st.subheader("Fill in the form")
-
-    all_inputs = {}
-    for proj in range(1, project_count + 1):
-        st.markdown(f"### Project {proj}")
-        for i, label in enumerate(labels):
-            custom_label = f"{label} – Project {proj}"
-            key = f"{i}_P{proj}"
-            all_inputs[key] = st.text_input(custom_label, key=key)
-
-    contractor = all_inputs.get(f"3_P1", "Contractor")
-    project_name = all_inputs.get(f"0_P1", "FilledTemplate")  # Using label 0 as project title
-
-    if st.button("Generate Filled Excel"):
-        # Flatten for target column
-        excel_inputs = {}
-        for i, label in enumerate(labels):
-            key = f"{i}_P{project_count}"
-            val = all_inputs.get(key, "")
-            if val:
-                excel_inputs[i] = val
-        excel_file = update_excel(excel_inputs, project_count)
-        st.success("Excel generated successfully")
-        st.download_button(
-            label="Download Excel File",
-            data=excel_file,
-            file_name=f"{project_name}_by_{contractor}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
-    st.subheader("Calculated Value from Template")
-    calculated = get_calculated_value(template_path, col_letter)
-    st.info(f"Calculated Value (Row 18): {calculated}")
-
-    st.subheader("Export Sheets to Word")
-    wb = load_template(project_count)
-    sheet_names = wb.sheetnames
-    selected_sheets = st.multiselect("Select sheets", sheet_names)
-
-    if st.button("Generate Word Document") and selected_sheets:
-        word_file = export_to_word(selected_sheets, template_path)
-        st.download_button(
-            label="Download Word File",
-            data=word_file,
-            file_name=f"{project_name}_by_{contractor}.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
-
-if __name__ == "__main__":
-    main()
+    words = amount_in_words_naira(calc_amount)
+    st.info(f"**Project {proj} – Amount Due:** ₦{calc_amount:,.2f}")
+    st.write(f"**Amount in Words:** {words}")
