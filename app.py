@@ -41,7 +41,14 @@ def write_to_details(ws, data_dict, column_map):
     for proj, entries in data_dict.items():
         col = column_map[proj]
         for row_idx, value in entries.items():
-            ws[f"{col}{int(row_idx)}"] = value
+            try:
+                # Convert value to number if possible
+                val = float(str(value).replace(",", "").strip())
+                # Write as int if it's a whole number
+                ws[f"{col}{int(row_idx)}"] = int(val) if val.is_integer() else val
+            except:
+                # Fall back to string
+                ws[f"{col}{int(row_idx)}"] = value
 
 def calculate_amount_due(inputs, proj):
     def get(row):
