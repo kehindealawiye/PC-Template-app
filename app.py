@@ -58,9 +58,10 @@ def calculate_amount_due(inputs, proj):
 
     advance_payment = advance_pct * contract_sum
     base = work_completed - (retention_pct * work_completed)
-    vat_amount = vat_pct * base
-    advance_deduction = advance_refund_pct * advance_payment
-    return base + vat_amount - advance_deduction - previous_payment
+    vat = vat_pct * base
+    advance_refund = advance_refund_pct * advance_payment
+    amount_due = (base + vat) - advance_refund - previous_payment
+    return amount_due
 
 def amount_in_words_naira(amount):
     naira = int(amount)
