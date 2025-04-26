@@ -27,9 +27,18 @@ custom_dropdowns = {
 }
 
 def load_field_structure():
+    structure = {}
     with open("Field Structure.csv", newline='', encoding='utf-8') as f:
         reader = csv.reader(f)
-        return list(reader)
+        next(reader)  # skip header if any
+        for row in reader:
+            group = row[0]
+            field_info = (row[1], row[2], row[3])  # (row_number, label, extra_info)
+            if group not in structure:
+                structure[group] = []
+            structure[group].append(field_info)
+    return structure
+
 
 def load_template(project_count):
     return load_workbook(template_paths[project_count])
