@@ -96,7 +96,7 @@ for group, fields in field_structure.items():
     with st.expander(group, expanded=True):
         for row, label, _ in fields:
             for proj in range(1, project_count + 1):
-                key = f"{row}_P{proj}"
+                key = f"{row}_{label}_P{proj}"   # <-- FIXED
                 label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
                 if label == "Address line 2":
                     client_ministry = all_inputs.get(f"3_P{proj}", "")
