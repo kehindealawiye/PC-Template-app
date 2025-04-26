@@ -110,8 +110,8 @@ for group, fields in field_structure.items():
 
 for proj in range(1, project_count + 1):
 
-contractor = all_inputs.get("4_P1", "Contractor")
-project_name = all_inputs.get("1_P1", "FilledTemplate")
+    contractor = all_inputs.get("4_P1", "Contractor")
+    project_name = all_inputs.get("1_P1", "FilledTemplate")
 
 if st.button("Generate Excel"):
     wb = load_template(project_count)
