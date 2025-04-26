@@ -54,10 +54,7 @@ def calculate_amount_due(inputs, proj):
     retention_pct = get("13") / 100
     previous_payment = get("14")
     advance_refund_pct = get("15") / 100
-    vat_label = "Vat"
-    vat_val = str(inputs.get(f"{vat_label}_P{proj}", "0")).replace("%", "").strip().lower()
-    vat_pct = float(vat_val) / 100 if vat_val not in ["", "nil"] else 0.0
-
+    vat_pct = get("16") / 100
 
     advance_payment = contract_sum * advance_payment_pct
     retention = work_completed * retention_pct
@@ -66,6 +63,18 @@ def calculate_amount_due(inputs, proj):
     total_net_amount = total_net_payment + vat
     advance_refund_amount = advance_refund_pct * advance_payment
     amount_due = total_net_amount - advance_refund_amount - previous_payment
+
+    st.markdown("### Debug Info")
+    st.write(f"Contract Sum: ₦{contract_sum:,.2f}")
+    st.write(f"Advance Payment %: {advance_payment_pct * 100}% → ₦{advance_payment:,.2f}")
+    st.write(f"Work Completed: ₦{work_completed:,.2f}")
+    st.write(f"Retention %: {retention_pct * 100}% → ₦{retention:,.2f}")
+    st.write(f"Total Net Payment: ₦{total_net_payment:,.2f}")
+    st.write(f"VAT %: {vat_pct * 100}% → ₦{vat:,.2f}")
+    st.write(f"Total Net Amount: ₦{total_net_amount:,.2f}")
+    st.write(f"Advance Refund %: {advance_refund_pct * 100}% → ₦{advance_refund_amount:,.2f}")
+    st.write(f"Previous Payment: ₦{previous_payment:,.2f}")
+    st.write(f"Final Amount Due: ₦{amount_due:,.2f}")
 
     return amount_due
 
@@ -108,10 +117,8 @@ for group, fields in field_structure.items():
                 else:
                     all_inputs[key] = st.text_input(label_suffix, key=key)
 
-for proj in range(1, project_count + 1):
-
-    contractor = all_inputs.get("4_P1", "Contractor")
-    project_name = all_inputs.get("1_P1", "FilledTemplate")
+contractor = all_inputs.get("4_P1", "Contractor")
+project_name = all_inputs.get("1_P1", "FilledTemplate")
 
 if st.button("Generate Excel"):
     wb = load_template(project_count)
