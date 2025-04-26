@@ -43,7 +43,10 @@ def write_to_details(ws, data_dict, column_map):
             ws[f"{col}{int(row_idx)}"] = value
 
 def calculate_amount_due(inputs, proj):
-    def get(row): return float(str(inputs.get(f"{row}_P{proj}", "0")).replace(",", "").replace("%", ""))
+    def get(row):
+        val = str(inputs.get(f"{row}_P{proj}", "0")).replace(",", "").replace("%", "").strip()
+        return float(val) if val else 0.0
+
     contract_sum = get("10")
     advance_pct = get("11") / 100
     work_completed = get("12")
@@ -66,7 +69,6 @@ def amount_in_words_naira(amount):
         words += f", {num2words(kobo, lang='en')} kobo"
     return words.replace("-", " ")
 
-# UI
 st.set_page_config(page_title="Prepayment Form", layout="wide")
 st.markdown("""
     <style>
@@ -89,7 +91,6 @@ column_map = project_columns[project_count]
 field_structure = load_field_structure()
 all_inputs = {}
 
-# Form
 for group, fields in field_structure.items():
     with st.expander(group, expanded=True):
         for row, label, _ in fields:
@@ -112,7 +113,6 @@ for group, fields in field_structure.items():
                 else:
                     all_inputs[key] = st.text_input(label_suffix, key=key)
 
-# Link
 for proj in range(1, project_count + 1):
     key = f"link_P{proj}"
     all_inputs[key] = st.text_input(f"Link to Inspection Pictures – Project {proj}", value="https://medpicturesapp.streamlit.app/", key=key)
@@ -120,7 +120,6 @@ for proj in range(1, project_count + 1):
 contractor = all_inputs.get("4_P1", "Contractor")
 project_name = all_inputs.get("1_P1", "FilledTemplate")
 
-# Generate Excel
 if st.button("Generate Excel"):
     wb = load_template(project_count)
     ws = wb[details_sheet]
