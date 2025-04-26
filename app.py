@@ -43,7 +43,7 @@ def write_to_details(ws, data_dict, column_map):
         for row_idx, value in entries.items():
             ws[f"{col}{int(row_idx)}"] = value
 
-def calculate_amount_due(inputs, proj):
+def calculate_amount_due(inputs, proj, show_debug=False):
     def get(row):
         val = str(inputs.get(f"{row}_P{proj}", "0")).replace(",", "").replace("%", "").strip().lower()
         return 0.0 if val in ["", "nil"] else float(val)
@@ -63,6 +63,19 @@ def calculate_amount_due(inputs, proj):
     total_net_amount = total_net_payment + vat
     advance_refund_amount = advance_refund_pct * advance_payment
     amount_due = total_net_amount - advance_refund_amount - previous_payment
+
+    if show_debug:
+        st.markdown("### Debug Info")
+        st.write(f"Contract Sum: ₦{contract_sum:,.2f}")
+        st.write(f"Advance Payment %: {advance_payment_pct*100}% → ₦{advance_payment:,.2f}")
+        st.write(f"Work Completed: ₦{work_completed:,.2f}")
+        st.write(f"Retention %: {retention_pct*100}% → ₦{retention:,.2f}")
+        st.write(f"Total Net Payment: ₦{total_net_payment:,.2f}")
+        st.write(f"VAT %: {vat_pct*100}% → ₦{vat:,.2f}")
+        st.write(f"Total Net Amount: ₦{total_net_amount:,.2f}")
+        st.write(f"Advance Refund %: {advance_refund_pct*100}% → ₦{advance_refund_amount:,.2f}")
+        st.write(f"Previous Payment: ₦{previous_payment:,.2f}")
+        st.write(f"Final Amount Due: ₦{amount_due:,.2f}")
 
     return amount_due
 
@@ -95,7 +108,7 @@ for group, fields in field_structure.items():
                 elif label in custom_dropdowns:
                     all_inputs[key] = st.selectbox(label_suffix, custom_dropdowns[label], key=key)
                 elif row == "18":
-                    amount = calculate_amount_due(all_inputs, proj)
+                    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
                     all_inputs[key] = f"{amount:,.2f}"
                     st.info(f"Calculated Amount Due: ₦{all_inputs[key]}")
                 elif row == "19":
