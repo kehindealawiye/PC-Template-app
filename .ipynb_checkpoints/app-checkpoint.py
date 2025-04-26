@@ -43,7 +43,7 @@ def write_to_details(ws, data_dict, column_map):
         for row_idx, value in entries.items():
             ws[f"{col}{int(row_idx)}"] = value
 
-def calculate_amount_due(inputs, proj, show_debug=False):
+def calculate_amount_due(inputs, proj):
     def get(row):
         val = str(inputs.get(f"{row}_P{proj}", "0")).replace(",", "").replace("%", "").strip().lower()
         return 0.0 if val in ["", "nil"] else float(val)
@@ -54,9 +54,10 @@ def calculate_amount_due(inputs, proj, show_debug=False):
     retention_pct = get("13") / 100
     previous_payment = get("14")
     advance_refund_pct = get("15") / 100
-    vat_key = f"vat_P{proj}"
-    vat_raw = str(inputs.get(vat_key, "0")).replace("%", "").strip().lower()
-    vat_pct = 0.0 if vat_raw in ["", "nil"] else float(vat_raw) / 100
+    vat_label = "Vat"
+    vat_val = str(inputs.get(f"{vat_label}_P{proj}", "0")).replace("%", "").strip().lower()
+    vat_pct = float(vat_val) / 100 if vat_val not in ["", "nil"] else 0.0
+
 
     advance_payment = contract_sum * advance_payment_pct
     retention = work_completed * retention_pct
@@ -65,19 +66,6 @@ def calculate_amount_due(inputs, proj, show_debug=False):
     total_net_amount = total_net_payment + vat
     advance_refund_amount = advance_refund_pct * advance_payment
     amount_due = total_net_amount - advance_refund_amount - previous_payment
-
-    if show_debug:
-        st.markdown("### Debug Info")
-        st.write(f"Contract Sum: ₦{contract_sum:,.2f}")
-        st.write(f"Advance Payment %: {advance_payment_pct*100}% → ₦{advance_payment:,.2f}")
-        st.write(f"Work Completed: ₦{work_completed:,.2f}")
-        st.write(f"Retention %: {retention_pct*100}% → ₦{retention:,.2f}")
-        st.write(f"Total Net Payment: ₦{total_net_payment:,.2f}")
-        st.write(f"VAT %: {vat_pct*100}% → ₦{vat:,.2f}")
-        st.write(f"Total Net Amount: ₦{total_net_amount:,.2f}")
-        st.write(f"Advance Refund %: {advance_refund_pct*100}% → ₦{advance_refund_amount:,.2f}")
-        st.write(f"Previous Payment: ₦{previous_payment:,.2f}")
-        st.write(f"Final Amount Due: ₦{amount_due:,.2f}")
 
     return amount_due
 
@@ -110,7 +98,7 @@ for group, fields in field_structure.items():
                 elif label in custom_dropdowns:
                     all_inputs[key] = st.selectbox(label_suffix, custom_dropdowns[label], key=key)
                 elif row == "18":
-                    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
+                    amount = calculate_amount_due(all_inputs, proj)
                     all_inputs[key] = f"{amount:,.2f}"
                     st.info(f"Calculated Amount Due: ₦{all_inputs[key]}")
                 elif row == "19":
@@ -121,8 +109,6 @@ for group, fields in field_structure.items():
                     all_inputs[key] = st.text_input(label_suffix, key=key)
 
 for proj in range(1, project_count + 1):
-    key = f"vat_P{proj}"
-    all_inputs[key] = st.text_input(f"VAT % – Project {proj}", value="7.5", key=key)
 
 contractor = all_inputs.get("4_P1", "Contractor")
 project_name = all_inputs.get("1_P1", "FilledTemplate")
