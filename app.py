@@ -56,7 +56,7 @@ def calculate_amount_due(inputs, proj, show_debug=False):
     advance_refund_pct = get("15") / 100
     vat_key = f"vat_P{proj}"
     vat_raw = str(inputs.get(vat_key, "0")).replace("%", "").strip().lower()
-    vat_pct = float(vat_raw) / 100 if vat_raw not in ["", "nil"] else 0.0
+    vat_pct = 0.0 if vat_raw in ["", "nil"] else float(vat_raw) / 100
 
     advance_payment = contract_sum * advance_payment_pct
     retention = work_completed * retention_pct
