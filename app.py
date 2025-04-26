@@ -1,11 +1,11 @@
+
 import streamlit as st
 import pandas as pd
-import json
 import io
-import csv
 from openpyxl import load_workbook
 from num2words import num2words
 
+# Template paths and project column map
 template_paths = {
     1: "PC Template-1.xlsx",
     2: "PC Template 2.xlsx",
@@ -18,6 +18,7 @@ project_columns = {
 }
 details_sheet = "DETAILS"
 
+# User-defined dropdowns
 custom_dropdowns = {
     "Payment stage:": ["Stage Payment", "Final Payment", "Retention"],
     "Percentage of Advance payment? (as specified in the award letter)": ["0%", "25%", "40%", "50%", "60%", "70%"],
@@ -27,18 +28,13 @@ custom_dropdowns = {
 }
 
 def load_field_structure():
-    structure = {}
-    with open("Field Structure.csv", newline='', encoding='utf-8') as f:
-        reader = csv.reader(f)
-        next(reader)  # skip header if any
-        for row in reader:
-            group = row[0]
-            field_info = (row[1], row[2], row[3])  # (row_number, label, extra_info)
-            if group not in structure:
-                structure[group] = []
-            structure[group].append(field_info)
-    return structure
-
+    df = pd.read_csv("Grouped_Field_Structure_Clean.csv")
+    grouped = {}
+    for _, row in df.iterrows():
+        group = row['Group']
+        field = (str(row['Row']), row['Label'], row.get('Options', ''))
+        grouped.setdefault(group, []).append(field)
+    return grouped
 
 def load_template(project_count):
     return load_workbook(template_paths[project_count])
@@ -63,7 +59,7 @@ def amount_in_words_naira(amount):
         words += f", {num2words(kobo, lang='en')} kobo"
     return words.replace("-", " ")
 
-# --- UI Layout ---
+# --- UI Styling ---
 st.set_page_config(page_title="Prepayment Form", layout="wide")
 st.markdown("""
     <style>
@@ -82,7 +78,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- App Logic ---
+# --- Main App Logic ---
 st.title("Prepayment Certificate Filler")
 
 project_count = st.selectbox("Number of Projects", [1, 2, 3])
@@ -91,12 +87,12 @@ column_map = project_columns[project_count]
 field_structure = load_field_structure()
 all_inputs = {}
 
-# Input groups
+# Form fields per group
 for group, fields in field_structure.items():
     with st.expander(group, expanded=True):
         for row, label, _ in fields:
             for proj in range(1, project_count + 1):
-                key = f"{row}_{label}_P{proj}"   # <-- FIXED
+                key = f"{row}_P{proj}"
                 label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
                 if label == "Address line 2":
                     client_ministry = all_inputs.get(f"3_P{proj}", "")
@@ -106,7 +102,7 @@ for group, fields in field_structure.items():
                 else:
                     all_inputs[key] = st.text_input(label_suffix, key=key)
 
-# Link field
+# Inspection pictures link
 for proj in range(1, project_count + 1):
     key = f"link_P{proj}"
     all_inputs[key] = st.text_input(f"Link to Inspection Pictures – Project {proj}", value="https://medpicturesapp.streamlit.app/", key=key)
@@ -122,8 +118,7 @@ if st.button("Generate Excel"):
     for key, value in all_inputs.items():
         if "_P" in key:
             row, proj = key.split("_P")
-            if row.isdigit():
-                project_data[int(proj)][row] = value
+            project_data[int(proj)][row] = value
     write_to_details(ws, project_data, column_map)
 
     buffer = io.BytesIO()
@@ -137,7 +132,7 @@ if st.button("Generate Excel"):
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-# Live calculation
+# Calculation preview
 st.subheader("Amount Due Calculation Preview")
 for proj in range(1, project_count + 1):
     def parse_float(value):
