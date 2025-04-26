@@ -71,7 +71,7 @@ def main():
         for i, label in enumerate(labels):
             custom_label = f"{label} – Project {proj}"
             key = f"{i}_P{proj}"
-            all_inputs[key] = st.text_input(custom_label)
+            all_inputs[key] = st.text_input(custom_label, key=key)
 
     contractor = all_inputs.get(f"3_P1", "Contractor")
     project_name = all_inputs.get(f"0_P1", "FilledTemplate")  # Using label 0 as project title
