@@ -26,7 +26,7 @@ custom_dropdowns = {
 }
 
 def load_field_structure():
-    with open("Field_Structure.csv") as f:
+    with open("Field Structure.csv") as f:
         return csv.load(f)
 
 def load_template(project_count):
