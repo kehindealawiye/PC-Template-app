@@ -42,12 +42,16 @@ def write_to_details(ws, data_dict, column_map):
         col = column_map[proj]
         for row_idx, value in entries.items():
             try:
-                # Convert value to number if possible
-                val = float(str(value).replace(",", "").strip())
+                val_str = str(value).replace(",", "").strip()
+                if val_str.endswith("%"):
+                    # Handle percentages: convert "45%" to 0.45
+                    val = float(val_str.rstrip("%")) / 100
+                else:
+                    val = float(val_str)
                 # Write as int if it's a whole number
                 ws[f"{col}{int(row_idx)}"] = int(val) if val.is_integer() else val
-            except:
-                # Fall back to string
+            except (ValueError, TypeError):
+                # Fall back to writing the value as-is
                 ws[f"{col}{int(row_idx)}"] = value
 
 def calculate_amount_due(inputs, proj):
