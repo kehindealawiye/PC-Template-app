@@ -18,10 +18,11 @@ project_columns = {
 details_sheet = "DETAILS"
 
 custom_dropdowns = {
-    "Payment stage:": ["Stage Payment", "Final Payment", "Retention"],
+    "Payment stage:": ["Stage Payment", "Final Payment", "Retention Payment"],
     "Percentage of Advance payment? (as specified in the award letter)": ["0%", "25%", "40%", "50%", "60%", "70%"],
     "Is there 5% retention?": ["0%", "5%"],
     "Vat": ["0%", "7.5%"],
+    "Physical Stage of Work": ["Ongoing","Completed"],
     "Address line 1": ["The Director", "The Chairman", "The Permanent Secretary", "The Honourable Commissioner", "The Special Adviser"]
 }
 
@@ -41,6 +42,8 @@ def write_to_details(ws, data_dict, column_map):
     for proj, entries in data_dict.items():
         col = column_map[proj]
         for row_idx, value in entries.items():
+            if int(row_idx) == 1:
+                continue  # Skip writing to row 1
             try:
                 val_str = str(value).replace(",", "").strip()
                 if val_str.endswith("%"):
@@ -129,8 +132,8 @@ for group, fields in field_structure.items():
                 else:
                     all_inputs[key] = st.text_input(label_suffix, key=key)
 
-contractor = all_inputs.get("4_P1", "Contractor")
-project_name = all_inputs.get("1_P1", "FilledTemplate")
+contractor = all_inputs.get("5_P1", "Contractor")
+project_name = all_inputs.get("7_P1", "Project")
 
 if st.button("Generate Excel"):
     wb = load_template(project_count)
