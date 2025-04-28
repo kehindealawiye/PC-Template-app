@@ -116,12 +116,15 @@ for group, fields in field_structure.items():
                 elif row == "18":
                     amount = calculate_amount_due(all_inputs, proj, show_debug=True)
                     all_inputs[key] = f"{amount:,.2f}"
+                    all_inputs[f"19_P{proj}"] = amount_in_words_naira(amount)
                     st.info(f"Calculated Amount Due: ₦{all_inputs[key]}")
                 elif row == "19":
                     amount_words = all_inputs.get(f"19_P{proj}", "")
-                    st.write(f"Amount in Words: {amount_words}")
+                    if amount_words:
+                        st.write(f"Amount in Words: {amount_words}")
                 else:
                     all_inputs[key] = st.text_input(label_suffix, key=key)
+
 
 
 contractor = all_inputs.get("5_P1", "Contractor")
