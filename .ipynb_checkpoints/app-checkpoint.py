@@ -53,11 +53,13 @@ def calculate_amount_due(inputs, proj, show_debug=False):
         return 0.0 if val in ["", "nil"] else float(val)
 
     contract_sum = get("10")
+    revised_contract_sum = get("11")
     advance_payment_pct = get("12") / 100
     work_completed = get("13")
     retention_pct = get("14") / 100
     previous_payment = get("15")
     advance_refund_pct = get("16") / 100
+    vat_pct = get("17") / 100
 
     vat_key = f"Vat_P{proj}"
     raw_vat = inputs.get(vat_key, "0")
