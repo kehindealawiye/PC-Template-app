@@ -86,9 +86,9 @@ def calculate_amount_due(inputs, proj, show_debug=False):
         naira = int(amount)
         kobo = int(round((amount - naira) * 100))
         words = f"{num2words(naira, lang='en').capitalize()} naira"
-    if kobo > 0:
-        words += f", {num2words(kobo, lang='en')} kobo"
-    return words.replace("-", " ")
+        if kobo > 0:
+            words += f", {num2words(kobo, lang='en')} kobo"
+        return words.replace("-", " ")
 
 st.set_page_config(page_title="Prepayment Form", layout="wide")
 st.title("Prepayment Certificate Filler")
