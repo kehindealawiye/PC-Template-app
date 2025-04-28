@@ -37,7 +37,7 @@ def load_field_structure():
 def load_template(project_count):
     return load_workbook(template_paths[project_count])
 
-def write_to_details(ws, data_dict, column_map):
+def write_to_details(ws, project_data, column_map, project_count):
     for proj, entries in data_dict.items():
         col = column_map[proj]
         for row_idx, value in entries.items():
