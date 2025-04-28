@@ -147,12 +147,22 @@ project_name = all_inputs.get("7_P1", "Project")
 if st.button("Generate Excel"):
     wb = load_template(project_count)
     ws = wb[details_sheet]
+
     project_data = {p: {} for p in range(1, project_count + 1)}
+
     for key, value in all_inputs.items():
         if "_P" in key:
             row, proj = key.split("_P")
-            project_data[int(proj)][row] = value
-    write_to_details(ws, project_data, column_map, project_count)
+            proj = int(proj)
+            row_num = int(row)
+
+            # 🚫 Skip row 35 and downward for 2 or 3 projects
+            if project_count in [2, 3] and row_num >= 35:
+                continue
+
+            project_data[proj][row] = value
+
+    write_to_details(ws, project_data, column_map)
 
     buffer = io.BytesIO()
     wb.save(buffer)
