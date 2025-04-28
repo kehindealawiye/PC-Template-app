@@ -118,7 +118,8 @@ for group, fields in field_structure.items():
                     all_inputs[key] = f"{amount:,.2f}"
                     st.info(f"Calculated Amount Due: ₦{all_inputs[key]}")
                 elif row == "19":
-                    st.write(f"Amount in Words: {all_inputs[key]}")
+                    amount_words = all_inputs.get(f"19_P{proj}", "")
+                    st.write(f"Amount in Words: {amount_words}")
                 else:
                     all_inputs[key] = st.text_input(label_suffix, key=key)
 
