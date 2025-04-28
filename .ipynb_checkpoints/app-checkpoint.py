@@ -6,7 +6,7 @@ from openpyxl import load_workbook
 from num2words import num2words
 
 template_paths = {
-    1: "PC Template.xlsx",
+    1: "PC Template-1.xlsx",
     2: "PC Template 2.xlsx",
     3: "PC Template 3.xlsx"
 }
@@ -18,11 +18,10 @@ project_columns = {
 details_sheet = "DETAILS"
 
 custom_dropdowns = {
-    "Payment stage:": ["Stage Payment", "Final Payment", "Retention Payment"],
+    "Payment stage:": ["Stage Payment", "Final Payment", "Retention"],
     "Percentage of Advance payment? (as specified in the award letter)": ["0%", "25%", "40%", "50%", "60%", "70%"],
     "Is there 5% retention?": ["0%", "5%"],
     "Vat": ["0%", "7.5%"],
-    "Physical Stage of Work": ["Ongoing","Completed"],
     "Address line 1": ["The Director", "The Chairman", "The Permanent Secretary", "The Honourable Commissioner", "The Special Adviser"]
 }
 
@@ -42,34 +41,27 @@ def write_to_details(ws, data_dict, column_map):
     for proj, entries in data_dict.items():
         col = column_map[proj]
         for row_idx, value in entries.items():
-            if int(row_idx) == 1:
-                continue  # Skip writing to row 1
             try:
-                val_str = str(value).replace(",", "").strip()
-                if val_str.endswith("%"):
-                    # Handle percentages: convert "45%" to 0.45
-                    val = float(val_str.rstrip("%")) / 100
-                else:
-                    val = float(val_str)
-                # Write as int if it's a whole number
+                val = float(str(value).replace(",", "").strip())
                 ws[f"{col}{int(row_idx)}"] = int(val) if val.is_integer() else val
-            except (ValueError, TypeError):
-                # Fall back to writing the value as-is
+            except:
                 ws[f"{col}{int(row_idx)}"] = value
 
-def calculate_amount_due(inputs, proj):
+def calculate_amount_due(inputs, proj, show_debug=False):
     def get(row):
         val = str(inputs.get(f"{row}_P{proj}", "0")).replace(",", "").replace("%", "").strip().lower()
         return 0.0 if val in ["", "nil"] else float(val)
 
     contract_sum = get("10")
-    revised_contract_sum = get("11")
     advance_payment_pct = get("12") / 100
     work_completed = get("13")
     retention_pct = get("14") / 100
     previous_payment = get("15")
     advance_refund_pct = get("16") / 100
-    vat_pct = get("17") / 100
+
+    vat_label = "Vat"
+    vat_val = str(inputs.get(f"{vat_label}_P{proj}", "0")).replace("%", "").strip().lower()
+    vat_pct = float(vat_val) / 100 if vat_val not in ["", "nil"] else 0.0
 
     advance_payment = contract_sum * advance_payment_pct
     retention = work_completed * retention_pct
@@ -79,7 +71,8 @@ def calculate_amount_due(inputs, proj):
     advance_refund_amount = advance_refund_pct * advance_payment
     amount_due = total_net_amount - advance_refund_amount - previous_payment
 
-    st.markdown("### Debug Info")
+    if show_debug:
+    st.markdown(f"### Debug Info – Project {proj}")
     st.write(f"Contract Sum: ₦{contract_sum:,.2f}")
     st.write(f"Advance Payment %: {advance_payment_pct * 100}% → ₦{advance_payment:,.2f}")
     st.write(f"Work Completed: ₦{work_completed:,.2f}")
@@ -90,10 +83,8 @@ def calculate_amount_due(inputs, proj):
     st.write(f"Advance Refund %: {advance_refund_pct * 100}% → ₦{advance_refund_amount:,.2f}")
     st.write(f"Previous Payment: ₦{previous_payment:,.2f}")
     st.write(f"Final Amount Due: ₦{amount_due:,.2f}")
-
-    return amount_due
-
-def amount_in_words_naira(amount):
+        return amount_due
+    def amount_in_words_naira(amount):
     naira = int(amount)
     kobo = int(round((amount - naira) * 100))
     words = f"{num2words(naira, lang='en').capitalize()} naira"
@@ -122,15 +113,22 @@ for group, fields in field_structure.items():
                 elif label in custom_dropdowns:
                     all_inputs[key] = st.selectbox(label_suffix, custom_dropdowns[label], key=key)
                 elif row == "18":
-                    amount = calculate_amount_due(all_inputs, proj)
+                    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
                     all_inputs[key] = f"{amount:,.2f}"
                     st.info(f"Calculated Amount Due: ₦{all_inputs[key]}")
                 elif row == "19":
-                    amount = calculate_amount_due(all_inputs, proj)
+                    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
                     all_inputs[key] = amount_in_words_naira(amount)
                     st.write(f"Amount in Words: {all_inputs[key]}")
                 else:
                     all_inputs[key] = st.text_input(label_suffix, key=key)
+
+# Must be after project_count is defined
+# Prepopulate calculated fields for all projects
+for proj in range(1, project_count + 1):
+    amt = calculate_amount_due(all_inputs, proj)
+    all_inputs[f"18_P{proj}"] = f"{amt:,.2f}"
+    all_inputs[f"19_P{proj}"] = amount_in_words_naira(amt)
 
 contractor = all_inputs.get("5_P1", "Contractor")
 project_name = all_inputs.get("7_P1", "Project")
