@@ -124,12 +124,6 @@ for group, fields in field_structure.items():
                 else:
                     all_inputs[key] = st.text_input(label_suffix, key=key)
 
-# Must be after project_count is defined
-# Prepopulate calculated fields for all projects
-for proj in range(1, project_count + 1):
-    amt = calculate_amount_due(all_inputs, proj)
-    all_inputs[f"18_P{proj}"] = f"{amt:,.2f}"
-    all_inputs[f"19_P{proj}"] = amount_in_words_naira(amt)
 
 contractor = all_inputs.get("5_P1", "Contractor")
 project_name = all_inputs.get("7_P1", "Project")
