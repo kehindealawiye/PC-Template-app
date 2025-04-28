@@ -37,21 +37,28 @@ def load_field_structure():
 def load_template(project_count):
     return load_workbook(template_paths[project_count])
 
-def write_to_details(ws, project_data, column_map, project_count):
+def write_to_details(ws, data_dict, column_map, project_count):
     for proj, entries in data_dict.items():
         col = column_map[proj]
+
+        # Filter out rows >= 35 for 2 or 3 projects
+        filtered_entries = {}
         for row_idx, value in entries.items():
-            row_num = int(row_idx)
+            try:
+                row_num = int(row_idx)
+                if project_count in [2, 3] and row_num >= 35:
+                    continue
+                filtered_entries[row_idx] = value
+            except:
+                continue  # skip if row index is not a number
 
-            # 🚫 Skip rows 35 and below if more than 1 project
-            if project_count in [2, 3] and row_num >= 35:
-                continue
-
+        # Now write only filtered entries
+        for row_idx, value in filtered_entries.items():
             try:
                 val = float(str(value).replace(",", "").strip())
-                ws[f"{col}{row_num}"] = int(val) if val.is_integer() else val
+                ws[f"{col}{int(row_idx)}"] = int(val) if val.is_integer() else val
             except:
-                ws[f"{col}{row_num}"] = value
+                ws[f"{col}{int(row_idx)}"] = value
 
 
 def calculate_amount_due(inputs, proj, show_debug=False):
@@ -145,7 +152,7 @@ if st.button("Generate Excel"):
         if "_P" in key:
             row, proj = key.split("_P")
             project_data[int(proj)][row] = value
-    write_to_details(ws, project_data, column_map)
+    write_to_details(ws, project_data, column_map, project_count)
 
     buffer = io.BytesIO()
     wb.save(buffer)
