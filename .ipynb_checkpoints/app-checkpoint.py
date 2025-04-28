@@ -41,11 +41,18 @@ def write_to_details(ws, data_dict, column_map):
     for proj, entries in data_dict.items():
         col = column_map[proj]
         for row_idx, value in entries.items():
+            row_num = int(row_idx)
+
+            # 🚫 Skip rows 35 and below if more than 1 project
+            if project_count in [2, 3] and row_num >= 35:
+                continue
+
             try:
                 val = float(str(value).replace(",", "").strip())
-                ws[f"{col}{int(row_idx)}"] = int(val) if val.is_integer() else val
+                ws[f"{col}{row_num}"] = int(val) if val.is_integer() else val
             except:
-                ws[f"{col}{int(row_idx)}"] = value
+                ws[f"{col}{row_num}"] = value
+
 
 def calculate_amount_due(inputs, proj, show_debug=False):
     def get(row):
