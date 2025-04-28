@@ -72,17 +72,17 @@ def calculate_amount_due(inputs, proj, show_debug=False):
     amount_due = total_net_amount - advance_refund_amount - previous_payment
 
     if show_debug:
-    st.markdown(f"### Debug Info – Project {proj}")
-        st.write(f"Contract Sum: ₦{contract_sum:,.2f}")
-        st.write(f"Advance Payment %: {advance_payment_pct * 100}% → ₦{advance_payment:,.2f}")
-        st.write(f"Work Completed: ₦{work_completed:,.2f}")
-        st.write(f"Retention %: {retention_pct * 100}% → ₦{retention:,.2f}")
-        st.write(f"Total Net Payment: ₦{total_net_payment:,.2f}")
-        st.write(f"VAT %: {vat_pct * 100}% → ₦{vat:,.2f}")
-        st.write(f"Total Net Amount: ₦{total_net_amount:,.2f}")
-        st.write(f"Advance Refund %: {advance_refund_pct * 100}% → ₦{advance_refund_amount:,.2f}")
-        st.write(f"Previous Payment: ₦{previous_payment:,.2f}")
-        st.write(f"Final Amount Due: ₦{amount_due:,.2f}")
+        st.markdown(f"### Debug Info – Project {proj}")
+            st.write(f"Contract Sum: ₦{contract_sum:,.2f}")
+            st.write(f"Advance Payment %: {advance_payment_pct * 100}% → ₦{advance_payment:,.2f}")
+            st.write(f"Work Completed: ₦{work_completed:,.2f}")
+            st.write(f"Retention %: {retention_pct * 100}% → ₦{retention:,.2f}")
+            st.write(f"Total Net Payment: ₦{total_net_payment:,.2f}")
+            st.write(f"VAT %: {vat_pct * 100}% → ₦{vat:,.2f}")
+            st.write(f"Total Net Amount: ₦{total_net_amount:,.2f}")
+            st.write(f"Advance Refund %: {advance_refund_pct * 100}% → ₦{advance_refund_amount:,.2f}")
+            st.write(f"Previous Payment: ₦{previous_payment:,.2f}")
+            st.write(f"Final Amount Due: ₦{amount_due:,.2f}")
 
     return amount_due
 
