@@ -61,16 +61,20 @@ def calculate_amount_due(inputs, proj, show_debug=False):
     advance_refund_pct = get("16") / 100
     vat_pct = get("17") / 100
 
+    # --- VAT Processing ---
     vat_key = f"Vat_P{proj}"
     raw_vat = inputs.get(vat_key, "0")
     st.write(f"🔍 VAT raw value for Project {proj} = '{raw_vat}'")
 
     try:
-        vat_clean = str(raw_vat).replace("%", "").replace(",", "").strip().lower()
-        vat_pct = float(vat_clean) / 100 if vat_clean not in ["", "nil"] else 0.0
-    except:
+        if isinstance(raw_vat, float) or isinstance(raw_vat, int):
+            vat_pct = float(raw_vat) / 100
+        else:
+            vat_clean = str(raw_vat).replace("%", "").replace(",", "").strip().lower()
+            vat_pct = float(vat_clean) / 100 if vat_clean not in ["", "nil"] else 0.0
+    except Exception as e:
         vat_pct = 0.0
-        st.warning(f"⚠️ Unable to convert VAT value '{raw_vat}' for Project {proj}. Defaulting to 0%.")
+        st.warning(f"⚠️ Failed to convert VAT value '{raw_vat}' for Project {proj}. Error: {e}")
 
     advance_payment = contract_sum * advance_payment_pct
     retention = work_completed * retention_pct
