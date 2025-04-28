@@ -157,7 +157,7 @@ if st.button("Generate Excel"):
             row_num = int(row)
 
             # 🚫 Skip row 35 and downward for 2 or 3 projects
-            if project_count in [2, 3] and row_num >= 35:
+            if project_count in [2, 3] and row_num >= 46:
                 continue
 
             project_data[proj][row] = value
