@@ -125,7 +125,15 @@ field_structure = load_field_structure()
 all_inputs = load_saved_data()
 
 st.sidebar.subheader("Load a Saved Form")
-backup_files = sorted([f"backups/{f}" for f in os.listdir("backups") if f.startswith("form_backup_") and f.endswith(".csv")], reverse=True)
+
+if os.path.exists("backups"):
+    backup_files = sorted(
+        [f"backups/{f}" for f in os.listdir("backups") if f.startswith("form_backup_") and f.endswith(".csv")],
+        reverse=True
+    )
+else:
+    backup_files = []
+
 if backup_files:
     selected_file = st.sidebar.selectbox("Select backup to load", backup_files)
     if st.sidebar.button("Load Selected Backup"):
@@ -136,6 +144,9 @@ if backup_files:
             st.experimental_rerun()
         except:
             st.warning("Unable to load selected backup.")
+else:
+    st.sidebar.write("No backups found yet.")
+
 
 for group, fields in field_structure.items():
     with st.expander(group, expanded=False):
