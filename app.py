@@ -24,15 +24,16 @@ custom_dropdowns = {
     "Percentage of Advance payment? (as specified in the award letter)": ["0%", "25%", "40%", "50%", "60%", "70%"],
     "Is there 5% retention?": ["0%", "5%"],
     "Vat": ["0%", "7.5%"],
-    "Address line 1": ["The Director", "The Chairman", "The Permanent Secretary", "The Honourable Commissioner", "The Special Adviser"]
+    "Physical Stage of Work": ["Ongoing%", "Completed%"],
+    "Address line 1": ["The Director,", "The Chairman,", "The Permanent Secretary,", "The Honourable Commissioner,", "The Special Adviser,"]
 }
 
 def save_data_locally(all_inputs):
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     filename = f"form_backup_{timestamp}.csv"
     df = pd.DataFrame([all_inputs])
-    df.to_csv("saved_form_data.csv", index=False)  # for auto-restore
-    df.to_csv(filename, index=False)  # as archive
+    df.to_csv("saved_form_data.csv", index=False)
+    df.to_csv(filename, index=False)
 
 def load_saved_data():
     try:
@@ -79,11 +80,8 @@ project_count = st.selectbox("Number of Projects", [1, 2, 3])
 template_path = template_paths[project_count]
 column_map = project_columns[project_count]
 field_structure = load_field_structure()
-
-# Try to load saved data
 all_inputs = load_saved_data()
 
-# Allow user to load a specific backup file
 st.sidebar.subheader("Load a Saved Form")
 backup_files = sorted([f for f in os.listdir() if f.startswith("form_backup_") and f.endswith(".csv")], reverse=True)
 if backup_files:
@@ -97,7 +95,6 @@ if backup_files:
         except:
             st.warning("Unable to load selected backup.")
 
-# Form fields
 for group, fields in field_structure.items():
     with st.expander(group, expanded=True):
         for row, label, _ in fields:
@@ -112,7 +109,6 @@ for group, fields in field_structure.items():
                 else:
                     all_inputs[key] = st.text_input(label_suffix, value=all_inputs.get(key, ""), key=key)
 
-# Inspection link
 for proj in range(1, project_count + 1):
     key = f"link_P{proj}"
     all_inputs[key] = st.text_input(f"Link to Inspection Pictures – Project {proj}", value=all_inputs.get(key, "https://medpicturesapp.streamlit.app/"), key=key)
@@ -120,12 +116,10 @@ for proj in range(1, project_count + 1):
 contractor = all_inputs.get("4_P1", "Contractor")
 project_name = all_inputs.get("1_P1", "FilledTemplate")
 
-# Save offline
 if st.button("Save My Work Offline"):
     save_data_locally(all_inputs)
     st.success("Saved successfully with timestamp and recovery file.")
 
-# Generate Excel
 if st.button("Generate Excel"):
     wb = load_template(project_count)
     ws = wb[details_sheet]
@@ -147,7 +141,6 @@ if st.button("Generate Excel"):
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-# Preview calculation
 st.subheader("Amount Due Calculation Preview")
 for proj in range(1, project_count + 1):
     def parse_float(value):
