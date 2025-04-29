@@ -120,6 +120,9 @@ for group, fields in field_structure.items():
     with st.expander(group, expanded=False):
         for row, label, _ in fields:
             for proj in range(1, project_count + 1):
+                # ✅ Skip showing for Project 2 and 3 if it's a special card
+                if group in ["Date of Approval", "Address Line", "Signatories"] and proj > 1:
+                    continue
                 key = f"{row}_P{proj}"
                 label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
                 if label == "Address line 2":
