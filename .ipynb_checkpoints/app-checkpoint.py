@@ -111,7 +111,7 @@ def amount_in_words_naira(amount):
     naira = int(amount)
     kobo = int(round((amount - naira) * 100))
     words = f"{num2words(naira, lang='en').capitalize()} naira"
-        words = f"{num2words(naira, lang='en').capitalize()} naira"
+    words = f"{num2words(naira, lang='en').capitalize()} naira"
         if kobo > 0:
             words += f", {num2words(kobo, lang='en')} kobo"
         return words.replace("-", " ")
