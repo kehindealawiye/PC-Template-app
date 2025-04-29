@@ -144,13 +144,27 @@ if os.path.exists("backups"):
 else:
     backup_files = []
 
-if backup_files:
-    selected_file = st.sidebar.selectbox("Select backup to load", backup_files)
+# Build preview-friendly display names
+backup_titles = []
+for f in backup_files:
+    try:
+        data = pd.read_csv(os.path.join("backups", f)).to_dict(orient='records')[0]
+        project = data.get("5_P1", "No Project Name")
+        contractor = data.get("7_P1", "No Contractor")
+        backup_titles.append(f"{project} | {contractor} ({f})")
+    except:
+        backup_titles.append(f"(Unreadable) {f}")
+
+# Let user choose based on title
+if backup_titles:
+    selected_title = st.sidebar.selectbox("Select backup to load", backup_titles)
+    selected_file = backup_files[backup_titles.index(selected_title)]
+
     if st.sidebar.button("Load Selected Backup"):
         try:
             selected_data = pd.read_csv(os.path.join("backups", selected_file)).to_dict(orient='records')[0]
-            st.session_state["restored_inputs"] = selected_data  # ✅ store for rerun
-            st.success(f"Loaded data from {selected_file}")
+            st.session_state["restored_inputs"] = selected_data
+            st.success(f"Loaded backup: {selected_title}")
             st.rerun()
         except Exception as e:
             st.warning(f"Unable to load selected backup. Error: {e}")
