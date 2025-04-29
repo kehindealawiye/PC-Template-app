@@ -122,11 +122,14 @@ project_count = st.selectbox("Number of Projects", [1, 2, 3])
 template_path = template_paths[project_count]
 column_map = project_columns[project_count]
 field_structure = load_field_structure()
-all_inputs = load_saved_data()
+if "restored_inputs" in st.session_state:
+    all_inputs = st.session_state.pop("restored_inputs")
+else:
+    all_inputs = load_saved_data()
+
 
 st.sidebar.subheader("Load a Saved Form")
 
-# Ensure backup folder exists
 if os.path.exists("backups"):
     backup_files = sorted(
         [f for f in os.listdir("backups") if f.startswith("form_backup_") and f.endswith(".csv")],
@@ -140,14 +143,13 @@ if backup_files:
     if st.sidebar.button("Load Selected Backup"):
         try:
             selected_data = pd.read_csv(os.path.join("backups", selected_file)).to_dict(orient='records')[0]
-            all_inputs = selected_data
+            st.session_state["restored_inputs"] = selected_data  # ✅ store for rerun
             st.success(f"Loaded data from {selected_file}")
             st.rerun()
         except Exception as e:
             st.warning(f"Unable to load selected backup. Error: {e}")
 else:
     st.sidebar.info("No backups found yet. Save your form to create a backup.")
-
 
 for group, fields in field_structure.items():
     with st.expander(group, expanded=False):
