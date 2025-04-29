@@ -120,23 +120,41 @@ for group, fields in field_structure.items():
     with st.expander(group, expanded=False):
         for row, label, _ in fields:
             for proj in range(1, project_count + 1):
-                # ✅ Skip showing for Project 2 and 3 if it's a special card
+                # ✅ Handle special groups that must only show for Project 1
                 if group in ["Date of Approval", "Address Line", "Signatories"] and proj > 1:
                     continue
 
+                # ✅ Special handling inside Folio References section
+                if group == "Folio References":
+                    if label != "Inspection report File number" and proj > 1:
+                        continue  # skip other folio fields for projects 2 and 3
+
                 key = f"{row}_P{proj}"
 
-                # ✅ Set label without "Project {proj}" for special groups
-                if group in ["Date of Approval", "Address Line", "Signatories"]:
+                # ✅ Set label_suffix logic properly
+                if group in ["Date of Approval", "Address Line", "Signatories", "Folio References"] and label != "Inspection report File number":
                     label_suffix = label
                 else:
                     label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
 
+                # Form fields
                 if label == "Address line 2":
                     client_ministry = all_inputs.get(f"3_P{proj}", "")
                     all_inputs[key] = st.text_input(label_suffix, value=client_ministry, key=key)
                 elif label in custom_dropdowns:
                     all_inputs[key] = st.selectbox(label_suffix, custom_dropdowns[label], key=key)
+                elif row == "18":
+                    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
+                    all_inputs[key] = f"{amount:,.2f}"
+                    all_inputs[f"19_P{proj}"] = amount_in_words_naira(amount)
+                    st.info(f"Calculated Amount Due: ₦{all_inputs[key]}")
+                elif row == "19":
+                    amount_words = all_inputs.get(f"19_P{proj}", "")
+                    if amount_words:
+                        st.write(f"Amount in Words: {amount_words}")
+                else:
+                    all_inputs[key] = st.text_input(label_suffix, key=key)
+
 
                 elif row == "18":
                     amount = calculate_amount_due(all_inputs, proj, show_debug=True)
