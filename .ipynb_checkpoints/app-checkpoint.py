@@ -8,7 +8,7 @@ from openpyxl import load_workbook
 from num2words import num2words
 
 template_paths = {
-    1: "PC Template-1.xlsx",
+    1: "PC Template.xlsx",
     2: "PC Template 2.xlsx",
     3: "PC Template 3.xlsx"
 }
@@ -218,13 +218,4 @@ if st.button("Generate Excel"):
         file_name=f"{project_name}_by_{contractor}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
-st.subheader("Amount Due Calculation Preview")
-for proj in range(1, project_count + 1):
-    def parse_float(value):
-        try:
-            return float(str(value).replace(",", "").replace("%", ""))
-        except:
-            return 0.0
-
    
