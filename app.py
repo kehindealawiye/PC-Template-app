@@ -64,7 +64,10 @@ def write_to_details(ws, data_dict, column_map, project_count):
 def calculate_amount_due(inputs, proj, show_debug=False):
     def get(row):
         val = str(inputs.get(f"{row}_P{proj}", "0")).replace(",", "").replace("%", "").strip().lower()
-        return 0.0 if val in ["", "nil"] else float(val)
+        try:
+            return 0.0 if val in ["", "nil"] else float(val)
+        except:
+            return 0.0
 
     contract_sum = get("10")
     revised_contract_sum = get("11")
