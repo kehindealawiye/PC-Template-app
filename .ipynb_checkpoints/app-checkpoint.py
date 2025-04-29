@@ -30,10 +30,14 @@ custom_dropdowns = {
 
 def save_data_locally(all_inputs):
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    filename = f"form_backup_{timestamp}.csv"
+    filename = f"backups/form_backup_{timestamp}.csv"
     df = pd.DataFrame([all_inputs])
-    df.to_csv("saved_form_data.csv", index=False)
-    df.to_csv(filename, index=False)
+
+    # Ensure backups folder exists
+    os.makedirs("backups", exist_ok=True)
+
+    df.to_csv("saved_form_data.csv", index=False)  # still save latest form for auto-recovery
+    df.to_csv(filename, index=False)  # save timestamped backup inside backups/
 
 def load_saved_data():
     try:
@@ -53,9 +57,15 @@ def load_field_structure():
 def load_template(project_count):
     return load_workbook(template_paths[project_count])
 
-def write_to_details(ws, data_dict, column_map, project_count):
+def write_to_details(ws, data_dict, column_map):
     for proj, entries in data_dict.items():
         col = column_map[proj]
+        for row_idx, value in entries.items():
+            try:
+                val = float(str(value).replace(",", "").strip())
+                ws[f"{col}{int(row_idx)}"] = int(val) if val.is_integer() else val
+            except:
+                ws[f"{col}{int(row_idx)}"] = value
 
 def calculate_amount_due(inputs, proj, show_debug=False):
     def get(row):
@@ -115,7 +125,7 @@ field_structure = load_field_structure()
 all_inputs = load_saved_data()
 
 st.sidebar.subheader("Load a Saved Form")
-backup_files = sorted([f for f in os.listdir() if f.startswith("form_backup_") and f.endswith(".csv")], reverse=True)
+backup_files = sorted([f"backups/{f}" for f in os.listdir("backups") if f.startswith("form_backup_") and f.endswith(".csv")], reverse=True)
 if backup_files:
     selected_file = st.sidebar.selectbox("Select backup to load", backup_files)
     if st.sidebar.button("Load Selected Backup"):
