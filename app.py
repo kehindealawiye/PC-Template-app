@@ -130,6 +130,9 @@ if "restored_inputs" in st.session_state:
 else:
     all_inputs = load_saved_data()
 
+for k, v in all_inputs.items():
+    if pd.isna(v):
+        all_inputs[k] = ""
 
 st.sidebar.subheader("Load a Saved Form")
 
