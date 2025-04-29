@@ -142,7 +142,7 @@ if backup_files:
             selected_data = pd.read_csv(os.path.join("backups", selected_file)).to_dict(orient='records')[0]
             all_inputs = selected_data
             st.success(f"Loaded data from {selected_file}")
-            st.experimental_rerun()
+            st.rerun()
         except Exception as e:
             st.warning(f"Unable to load selected backup. Error: {e}")
 else:
