@@ -126,9 +126,10 @@ all_inputs = load_saved_data()
 
 st.sidebar.subheader("Load a Saved Form")
 
+# Ensure backup folder exists
 if os.path.exists("backups"):
     backup_files = sorted(
-        [f"backups/{f}" for f in os.listdir("backups") if f.startswith("form_backup_") and f.endswith(".csv")],
+        [f for f in os.listdir("backups") if f.startswith("form_backup_") and f.endswith(".csv")],
         reverse=True
     )
 else:
@@ -138,14 +139,14 @@ if backup_files:
     selected_file = st.sidebar.selectbox("Select backup to load", backup_files)
     if st.sidebar.button("Load Selected Backup"):
         try:
-            selected_data = pd.read_csv(selected_file).to_dict(orient='records')[0]
+            selected_data = pd.read_csv(os.path.join("backups", selected_file)).to_dict(orient='records')[0]
             all_inputs = selected_data
             st.success(f"Loaded data from {selected_file}")
             st.experimental_rerun()
-        except:
-            st.warning("Unable to load selected backup.")
+        except Exception as e:
+            st.warning(f"Unable to load selected backup. Error: {e}")
 else:
-    st.sidebar.write("No backups found yet.")
+    st.sidebar.info("No backups found yet. Save your form to create a backup.")
 
 
 for group, fields in field_structure.items():
