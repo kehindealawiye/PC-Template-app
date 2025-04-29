@@ -24,7 +24,7 @@ custom_dropdowns = {
     "Percentage of Advance payment? (as specified in the award letter)": ["0%", "25%", "40%", "50%", "60%", "70%"],
     "Is there 5% retention?": ["0%", "5%"],
     "Vat": ["0%", "7.5%"],
-    "Physical Stage of Work": ["Ongoing%", "Completed%"],
+    "Physical Stage of Work": ["Ongoing", "Completed"],
     "Address line 1": ["The Director,", "The Chairman,", "The Permanent Secretary,", "The Honourable Commissioner,", "The Special Adviser,"]
 }
 
