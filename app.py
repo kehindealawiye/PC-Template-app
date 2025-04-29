@@ -123,13 +123,21 @@ for group, fields in field_structure.items():
                 # ✅ Skip showing for Project 2 and 3 if it's a special card
                 if group in ["Date of Approval", "Address Line", "Signatories"] and proj > 1:
                     continue
+
                 key = f"{row}_P{proj}"
-                label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
+
+                # ✅ Set label without "Project {proj}" for special groups
+                if group in ["Date of Approval", "Address Line", "Signatories"]:
+                    label_suffix = label
+                else:
+                    label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
+
                 if label == "Address line 2":
                     client_ministry = all_inputs.get(f"3_P{proj}", "")
                     all_inputs[key] = st.text_input(label_suffix, value=client_ministry, key=key)
                 elif label in custom_dropdowns:
                     all_inputs[key] = st.selectbox(label_suffix, custom_dropdowns[label], key=key)
+
                 elif row == "18":
                     amount = calculate_amount_due(all_inputs, proj, show_debug=True)
                     all_inputs[key] = f"{amount:,.2f}"
