@@ -171,6 +171,10 @@ if backup_titles:
 else:
     st.sidebar.info("No backups found yet. Save your form to create a backup.")
 
+if st.sidebar.button("Start New Blank Form"):
+    st.session_state["restored_inputs"] = {}
+    st.rerun()
+
 for group, fields in field_structure.items():
     with st.expander(group, expanded=False):
         for row, label, _ in fields:
