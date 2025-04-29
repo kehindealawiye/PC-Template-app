@@ -178,7 +178,9 @@ for group, fields in field_structure.items():
                     all_inputs[key] = st.text_input(label_suffix, value=client_ministry, key=key)
 
                 elif label in custom_dropdowns:
-                    all_inputs[key] = st.selectbox(label_suffix, custom_dropdowns[label], key=key)
+                    options = custom_dropdowns[label]
+                    default = all_inputs.get(key, options[0]) if key in all_inputs else options[0]
+                    all_inputs[key] = st.selectbox(label_suffix, options, index=options.index(default), key=key)
 
                 elif row == "18":
                     amount = calculate_amount_due(all_inputs, proj, show_debug=True)
@@ -192,8 +194,9 @@ for group, fields in field_structure.items():
                     continue  # skip because already handled in row 18
 
                 else:
-                    all_inputs[key] = st.text_input(label_suffix, key=key)
-
+                # Always set default value from saved or restored inputs
+                    default = all_inputs.get(key, "")
+                    all_inputs[key] = st.text_input(label_suffix, value=default, key=key)
 
 contractor = all_inputs.get("7_P1", "Contractor")
 project_name = all_inputs.get("5_P1", "Project Description")
