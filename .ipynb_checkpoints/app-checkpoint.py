@@ -193,7 +193,7 @@ for group, fields in field_structure.items():
 
 
 contractor = all_inputs.get("7_P1", "Contractor")
-project_name = all_inputs.get("5_P1", "Project_name)
+project_name = all_inputs.get("5_P1", "Project Description)
 
 if st.button("Save My Work Offline"):
     save_data_locally(all_inputs)
