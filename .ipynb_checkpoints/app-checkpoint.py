@@ -57,26 +57,6 @@ def write_to_details(ws, data_dict, column_map, project_count):
     for proj, entries in data_dict.items():
         col = column_map[proj]
 
-        # Filter out rows >= 35 for 2 or 3 projects
-        filtered_entries = {}
-        for row_idx, value in entries.items():
-            try:
-                row_num = int(row_idx)
-                if project_count in [2, 3] and row_num >= 35:
-                    continue
-                filtered_entries[row_idx] = value
-            except:
-                continue  # skip if row index is not a number
-
-        # Now write only filtered entries
-        for row_idx, value in filtered_entries.items():
-            try:
-                val = float(str(value).replace(",", "").strip())
-                ws[f"{col}{int(row_idx)}"] = int(val) if val.is_integer() else val
-            except:
-                ws[f"{col}{int(row_idx)}"] = value
-
-
 def calculate_amount_due(inputs, proj, show_debug=False):
     def get(row):
         val = str(inputs.get(f"{row}_P{proj}", "0")).replace(",", "").replace("%", "").strip().lower()
