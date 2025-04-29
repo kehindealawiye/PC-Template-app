@@ -106,14 +106,17 @@ def calculate_amount_due(inputs, proj, show_debug=False):
         st.write(f"Final Amount Due: ₦{amount_due:,.2f}")
 
     return amount_due
-
+    
 def amount_in_words_naira(amount):
     naira = int(amount)
     kobo = int(round((amount - naira) * 100))
     words = f"{num2words(naira, lang='en').capitalize()} naira"
-    if kobo > 0:
-        words += f", {num2words(kobo, lang='en')} kobo"
-    return words.replace("-", " ")
+        words = f"{num2words(naira, lang='en').capitalize()} naira"
+        if kobo > 0:
+            words += f", {num2words(kobo, lang='en')} kobo"
+        return words.replace("-", " ")
+    except Exception as e:
+        return f"Error: {e}"
 
 st.set_page_config(page_title="Prepayment Form", layout="wide")
 st.title("Prepayment Certificate Filler")
