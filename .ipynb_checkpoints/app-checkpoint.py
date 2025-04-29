@@ -2,18 +2,10 @@
 import streamlit as st
 import pandas as pd
 import io
+import os
+from datetime import datetime
 from openpyxl import load_workbook
 from num2words import num2words
-
-def save_data_locally(all_inputs):
-    df = pd.DataFrame([all_inputs])
-    df.to_csv("saved_form_data.csv", index=False)
-
-def load_saved_data():
-    try:
-        return pd.read_csv("saved_form_data.csv").to_dict(orient='records')[0]
-    except:
-        return {}
 
 template_paths = {
     1: "PC Template-1.xlsx",
@@ -35,6 +27,19 @@ custom_dropdowns = {
     "Address line 1": ["The Director", "The Chairman", "The Permanent Secretary", "The Honourable Commissioner", "The Special Adviser"]
 }
 
+def save_data_locally(all_inputs):
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"form_backup_{timestamp}.csv"
+    df = pd.DataFrame([all_inputs])
+    df.to_csv("saved_form_data.csv", index=False)  # for auto-restore
+    df.to_csv(filename, index=False)  # as archive
+
+def load_saved_data():
+    try:
+        return pd.read_csv("saved_form_data.csv").to_dict(orient='records')[0]
+    except:
+        return {}
+
 def load_field_structure():
     df = pd.read_csv("Grouped_Field_Structure_Clean.csv")
     grouped = {}
@@ -47,69 +52,17 @@ def load_field_structure():
 def load_template(project_count):
     return load_workbook(template_paths[project_count])
 
-def write_to_details(ws, data_dict, column_map, project_count):
+def write_to_details(ws, data_dict, column_map):
     for proj, entries in data_dict.items():
         col = column_map[proj]
-
-        # Filter out rows >= 35 for 2 or 3 projects
-        filtered_entries = {}
         for row_idx, value in entries.items():
-            try:
-                row_num = int(row_idx)
-                if project_count in [2, 3] and row_num >= 35:
-                    continue
-                filtered_entries[row_idx] = value
-            except:
-                continue  # skip if row index is not a number
+            ws[f"{col}{int(row_idx)}"] = value
 
-        # Now write only filtered entries
-        for row_idx, value in filtered_entries.items():
-            try:
-                val = float(str(value).replace(",", "").strip())
-                ws[f"{col}{int(row_idx)}"] = int(val) if val.is_integer() else val
-            except:
-                ws[f"{col}{int(row_idx)}"] = value
-
-
-def calculate_amount_due(inputs, proj, show_debug=False):
-    def get(row):
-        val = str(inputs.get(f"{row}_P{proj}", "0")).replace(",", "").replace("%", "").strip().lower()
-        try:
-            return 0.0 if val in ["", "nil"] else float(val)
-        except:
-            return 0.0
-
-    contract_sum = get("10")
-    revised_contract_sum = get("11")
-    advance_payment_pct = get("12") / 100
-    work_completed = get("13")
-    retention_pct = get("14") / 100
-    previous_payment = get("15")
-    advance_refund_pct = get("16") / 100
-    vat_pct = get("17") / 100
-
-    advance_payment = contract_sum * advance_payment_pct
-    retention = work_completed * retention_pct
-    total_net_payment = work_completed - retention
-    vat = total_net_payment * vat_pct
-    total_net_amount = total_net_payment + vat
-    advance_refund_amount = advance_refund_pct * advance_payment
-    amount_due = total_net_amount - advance_refund_amount - previous_payment
-
-    if show_debug:
-        st.markdown(f"### Debug Info – Project {proj}")
-        st.write(f"Contract Sum: ₦{contract_sum:,.2f}")
-        st.write(f"Advance Payment %: {advance_payment_pct * 100}% → ₦{advance_payment:,.2f}")
-        st.write(f"Work Completed: ₦{work_completed:,.2f}")
-        st.write(f"Retention %: {retention_pct * 100}% → ₦{retention:,.2f}")
-        st.write(f"Total Net Payment: ₦{total_net_payment:,.2f}")
-        st.write(f"VAT %: {vat_pct * 100}% → ₦{vat:,.2f}")
-        st.write(f"Total Net Amount: ₦{total_net_amount:,.2f}")
-        st.write(f"Advance Refund %: {advance_refund_pct * 100}% → ₦{advance_refund_amount:,.2f}")
-        st.write(f"Previous Payment: ₦{previous_payment:,.2f}")
-        st.write(f"Final Amount Due: ₦{amount_due:,.2f}")
-
-    return amount_due
+def get_calculated_value(advance_payment, advance_refund_pct, work_completed, retention_pct, vat_pct, previous_payment):
+    base = work_completed - (retention_pct * work_completed)
+    vat_amount = vat_pct * base
+    advance_deduction = advance_refund_pct * advance_payment
+    return base + vat_amount - advance_deduction - previous_payment
 
 def amount_in_words_naira(amount):
     naira = int(amount)
@@ -119,86 +72,68 @@ def amount_in_words_naira(amount):
         words += f", {num2words(kobo, lang='en')} kobo"
     return words.replace("-", " ")
 
-
 st.set_page_config(page_title="Prepayment Form", layout="wide")
 st.title("Prepayment Certificate Filler")
 
 project_count = st.selectbox("Number of Projects", [1, 2, 3])
-
 template_path = template_paths[project_count]
 column_map = project_columns[project_count]
 field_structure = load_field_structure()
 
-all_inputs = load_saved_data()  # << Load here
+# Try to load saved data
+all_inputs = load_saved_data()
 
+# Allow user to load a specific backup file
+st.sidebar.subheader("Load a Saved Form")
+backup_files = sorted([f for f in os.listdir() if f.startswith("form_backup_") and f.endswith(".csv")], reverse=True)
+if backup_files:
+    selected_file = st.sidebar.selectbox("Select backup to load", backup_files)
+    if st.sidebar.button("Load Selected Backup"):
+        try:
+            selected_data = pd.read_csv(selected_file).to_dict(orient='records')[0]
+            all_inputs = selected_data
+            st.success(f"Loaded data from {selected_file}")
+            st.experimental_rerun()
+        except:
+            st.warning("Unable to load selected backup.")
+
+# Form fields
 for group, fields in field_structure.items():
-    with st.expander(group, expanded=False):
+    with st.expander(group, expanded=True):
         for row, label, _ in fields:
             for proj in range(1, project_count + 1):
-                # Skip these sections for projects > 1
-                if group in ["Date of Approval", "Address Line", "Signatories"] and proj > 1:
-                    continue
-
-                # Show only 'Inspection report File number' for projects 2 & 3
-                if group == "Folio References":
-                    if label != "Inspection report File number" and proj > 1:
-                        continue
-
                 key = f"{row}_P{proj}"
-
-                # Control label formatting
-                if group in ["Date of Approval", "Address Line", "Signatories", "Folio References"] and label != "Inspection report File number":
-                    label_suffix = label
-                else:
-                    label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
-
-                # Handle different field types
+                label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
                 if label == "Address line 2":
                     client_ministry = all_inputs.get(f"3_P{proj}", "")
                     all_inputs[key] = st.text_input(label_suffix, value=client_ministry, key=key)
-
                 elif label in custom_dropdowns:
                     all_inputs[key] = st.selectbox(label_suffix, custom_dropdowns[label], key=key)
-
-                elif row == "18":
-                    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
-                    all_inputs[key] = f"{amount:,.2f}"
-                    amount_words = amount_in_words_naira(amount)
-                    all_inputs[f"19_P{proj}"] = amount_words
-                    st.info(f"Calculated Amount Due: ₦{all_inputs[key]}")
-                    st.write(f"Amount in Words: {amount_words}")
-
-                elif row == "19":
-                    continue  # skip because already handled in row 18
-
                 else:
-                    all_inputs[key] = st.text_input(label_suffix, key=key)
+                    all_inputs[key] = st.text_input(label_suffix, value=all_inputs.get(key, ""), key=key)
 
-contractor = all_inputs.get("5_P1", "Contractor")
-project_name = all_inputs.get("7_P1", "Project")
+# Inspection link
+for proj in range(1, project_count + 1):
+    key = f"link_P{proj}"
+    all_inputs[key] = st.text_input(f"Link to Inspection Pictures – Project {proj}", value=all_inputs.get(key, "https://medpicturesapp.streamlit.app/"), key=key)
 
+contractor = all_inputs.get("4_P1", "Contractor")
+project_name = all_inputs.get("1_P1", "FilledTemplate")
+
+# Save offline
 if st.button("Save My Work Offline"):
     save_data_locally(all_inputs)
-    st.success("Your work has been saved offline!")
+    st.success("Saved successfully with timestamp and recovery file.")
 
+# Generate Excel
 if st.button("Generate Excel"):
     wb = load_template(project_count)
     ws = wb[details_sheet]
-
     project_data = {p: {} for p in range(1, project_count + 1)}
-
     for key, value in all_inputs.items():
         if "_P" in key:
             row, proj = key.split("_P")
-            proj = int(proj)
-            row_num = int(row)
-
-            # 🚫 Skip row 35 and downward for 2 or 3 projects
-            if project_count in [2, 3] and row_num >= 46:
-                continue
-
-            project_data[proj][row] = value
-
+            project_data[int(proj)][row] = value
     write_to_details(ws, project_data, column_map)
 
     buffer = io.BytesIO()
@@ -211,3 +146,29 @@ if st.button("Generate Excel"):
         file_name=f"{project_name}_by_{contractor}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+# Preview calculation
+st.subheader("Amount Due Calculation Preview")
+for proj in range(1, project_count + 1):
+    def parse_float(value):
+        try:
+            return float(str(value).replace(",", "").replace("%", ""))
+        except:
+            return 0.0
+
+    work_completed = parse_float(all_inputs.get(f"11_P{proj}", 0))
+    retention_pct = parse_float(all_inputs.get(f"12_P{proj}", "0")) / 100
+    vat_pct = parse_float(all_inputs.get(f"13_P{proj}", "0")) / 100
+    previous_payment = parse_float(all_inputs.get(f"14_P{proj}", 0))
+    advance_refund_pct = parse_float(all_inputs.get(f"15_P{proj}", 0)) / 100
+    advance_payment = parse_float(all_inputs.get(f"9_P{proj}", 0))
+
+    calc_amount = get_calculated_value(
+        advance_payment, advance_refund_pct,
+        work_completed, retention_pct,
+        vat_pct, previous_payment
+    )
+
+    words = amount_in_words_naira(calc_amount)
+    st.info(f"**Project {proj} – Amount Due:** ₦{calc_amount:,.2f}")
+    st.write(f"**Amount in Words:** {words}")
