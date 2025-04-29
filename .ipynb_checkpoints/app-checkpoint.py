@@ -5,6 +5,16 @@ import io
 from openpyxl import load_workbook
 from num2words import num2words
 
+def save_data_locally(all_inputs):
+    df = pd.DataFrame([all_inputs])
+    df.to_csv("saved_form_data.csv", index=False)
+
+def load_saved_data():
+    try:
+        return pd.read_csv("saved_form_data.csv").to_dict(orient='records')[0]
+    except:
+        return {}
+
 template_paths = {
     1: "PC Template-1.xlsx",
     2: "PC Template 2.xlsx",
@@ -114,10 +124,12 @@ st.set_page_config(page_title="Prepayment Form", layout="wide")
 st.title("Prepayment Certificate Filler")
 
 project_count = st.selectbox("Number of Projects", [1, 2, 3])
+
 template_path = template_paths[project_count]
 column_map = project_columns[project_count]
 field_structure = load_field_structure()
-all_inputs = {}
+
+all_inputs = load_saved_data()  # << Load here
 
 for group, fields in field_structure.items():
     with st.expander(group, expanded=False):
@@ -164,6 +176,10 @@ for group, fields in field_structure.items():
 
 contractor = all_inputs.get("5_P1", "Contractor")
 project_name = all_inputs.get("7_P1", "Project")
+
+if st.button("Save My Work Offline"):
+    save_data_locally(all_inputs)
+    st.success("Your work has been saved offline!")
 
 if st.button("Generate Excel"):
     wb = load_template(project_count)
