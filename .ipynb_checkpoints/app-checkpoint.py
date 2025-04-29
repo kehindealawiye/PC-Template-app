@@ -61,50 +61,42 @@ def write_to_details(ws, data_dict, column_map, project_count):
                 ws[f"{col}{int(row_idx)}"] = value
 
 
-def calculate_amount_due(inputs, proj, show_debug=False):
-    def get(row):
-        val = str(inputs.get(f"{row}_P{proj}", "0")).replace(",", "").replace("%", "").strip().lower()
-        return 0.0 if val in ["", "nil"] else float(val)
+for group, fields in field_structure.items():
+    with st.expander(group, expanded=False):
+        for row, label, _ in fields:
+            for proj in range(1, project_count + 1):
+                # Skip these sections for projects > 1
+                if group in ["Date of Approval", "Address Line", "Signatories"] and proj > 1:
+                    continue
 
-    contract_sum = get("10")
-    revised_contract_sum = get("11")
-    advance_payment_pct = get("12") / 100
-    work_completed = get("13")
-    retention_pct = get("14") / 100
-    previous_payment = get("15")
-    advance_refund_pct = get("16") / 100
-    vat_pct = get("17") / 100
+                # Show only 'Inspection report File number' for projects 2 & 3
+                if group == "Folio References":
+                    if label != "Inspection report File number" and proj > 1:
+                        continue
 
-    advance_payment = contract_sum * advance_payment_pct
-    retention = work_completed * retention_pct
-    total_net_payment = work_completed - retention
-    vat = total_net_payment * vat_pct
-    total_net_amount = total_net_payment + vat
-    advance_refund_amount = advance_refund_pct * advance_payment
-    amount_due = total_net_amount - advance_refund_amount - previous_payment
+                key = f"{row}_P{proj}"
 
-    if show_debug:
-        st.markdown(f"### Debug Info – Project {proj}")
-        st.write(f"Contract Sum: ₦{contract_sum:,.2f}")
-        st.write(f"Advance Payment %: {advance_payment_pct * 100}% → ₦{advance_payment:,.2f}")
-        st.write(f"Work Completed: ₦{work_completed:,.2f}")
-        st.write(f"Retention %: {retention_pct * 100}% → ₦{retention:,.2f}")
-        st.write(f"Total Net Payment: ₦{total_net_payment:,.2f}")
-        st.write(f"VAT %: {vat_pct * 100}% → ₦{vat:,.2f}")
-        st.write(f"Total Net Amount: ₦{total_net_amount:,.2f}")
-        st.write(f"Advance Refund %: {advance_refund_pct * 100}% → ₦{advance_refund_amount:,.2f}")
-        st.write(f"Previous Payment: ₦{previous_payment:,.2f}")
-        st.write(f"Final Amount Due: ₦{amount_due:,.2f}")
+                # Control label formatting
+                if group in ["Date of Approval", "Address Line", "Signatories", "Folio References"] and label != "Inspection report File number":
+                    label_suffix = label
+                else:
+                    label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
 
-    return amount_due
+                # Handle different field types
+                if label == "Address line 2":
+                    client_ministry = all_inputs.get(f"3_P{proj}", "")
+                    all_inputs[key] = st.text_input(label_suffix, value=client_ministry, key=key)
 
-def amount_in_words_naira(amount):
-    naira = int(amount)
-    kobo = int(round((amount - naira) * 100))
-    words = f"{num2words(naira, lang='en').capitalize()} naira"
-    if kobo > 0:
-        words += f", {num2words(kobo, lang='en')} kobo"
-    return words.replace("-", " ")
+                elif label in custom_dropdowns:
+                    all_inputs[key] = st.selectbox(label_suffix, custom_dropdowns[label], key=key)
+
+                elif row == "18":
+                    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
+                    all_inputs[key] = f"{amount:,.2f}"
+                    amount_words = amount_in_words_naira(amount)
+                    all_inputs[f"19_P{proj}"] = amount_words
+                    st.info(f"Calculated Amount Due: ₦{all_inputs[key]}")
+                    st.write(f"Amount in Words:
 
 
 st.set_page_config(page_title="Prepayment Form", layout="wide")
@@ -120,24 +112,20 @@ for group, fields in field_structure.items():
     with st.expander(group, expanded=False):
         for row, label, _ in fields:
             for proj in range(1, project_count + 1):
-                # ✅ Handle special groups that must only show for Project 1
                 if group in ["Date of Approval", "Address Line", "Signatories"] and proj > 1:
                     continue
 
-                # ✅ Special handling inside Folio References section
                 if group == "Folio References":
                     if label != "Inspection report File number" and proj > 1:
-                        continue  # skip other folio fields for projects 2 and 3
+                        continue
 
                 key = f"{row}_P{proj}"
 
-                # ✅ Set label_suffix logic properly
                 if group in ["Date of Approval", "Address Line", "Signatories", "Folio References"] and label != "Inspection report File number":
                     label_suffix = label
                 else:
                     label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
 
-                # Form fields
                 if label == "Address line 2":
                     client_ministry = all_inputs.get(f"3_P{proj}", "")
                     all_inputs[key] = st.text_input(label_suffix, value=client_ministry, key=key)
@@ -154,20 +142,6 @@ for group, fields in field_structure.items():
                         st.write(f"Amount in Words: {amount_words}")
                 else:
                     all_inputs[key] = st.text_input(label_suffix, key=key)
-
-
-                elif row == "18":
-                    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
-                    all_inputs[key] = f"{amount:,.2f}"
-                    all_inputs[f"19_P{proj}"] = amount_in_words_naira(amount)
-                    st.info(f"Calculated Amount Due: ₦{all_inputs[key]}")
-                elif row == "19":
-                    amount_words = all_inputs.get(f"19_P{proj}", "")
-                    if amount_words:
-                        st.write(f"Amount in Words: {amount_words}")
-                else:
-                    all_inputs[key] = st.text_input(label_suffix, key=key)
-
 
 
 contractor = all_inputs.get("5_P1", "Contractor")
