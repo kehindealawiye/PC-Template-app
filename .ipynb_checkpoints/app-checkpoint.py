@@ -203,8 +203,15 @@ for group, fields in field_structure.items():
 
                 elif label in custom_dropdowns:
                     options = custom_dropdowns[label]
-                    default = all_inputs.get(key, options[0]) if key in all_inputs else options[0]
-                    all_inputs[key] = st.selectbox(label_suffix, options, index=options.index(default), key=key)
+                    default = all_inputs.get(key, options[0])
+
+                    # Safely find the index or fallback to index 0
+                    try:
+                        default_index = options.index(default)
+                    except:
+                        default_index = 0
+                    all_inputs[key] = st.selectbox(label_suffix, options, index=default_index, key=key)
+
 
                 elif row == "18":
                     amount = calculate_amount_due(all_inputs, proj, show_debug=True)
