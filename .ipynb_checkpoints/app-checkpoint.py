@@ -41,9 +41,8 @@ def save_data_locally(all_inputs):
     else:
         contractor = all_inputs.get("7_P1", "NoContractor").replace(" ", "_").lower()
         project = all_inputs.get("5_P1", "NoProject").replace(" ", "_").lower()
-        username = all_inputs.get("6_P1", "Anonymous").replace(" ", "_").lower()
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        filename = f"backups/{contractor}_{project}_{username}_{timestamp}.csv"
+        filename = f"backups/{contractor}_{project}_{timestamp}.csv"
         df.to_csv(filename, index=False)
 
 
@@ -192,61 +191,58 @@ for group, fields in field_structure.items():
     with st.expander(group, expanded=False):
         for row, label, _ in fields:
             for proj in range(1, project_count + 1):
-                # Skip these sections for projects > 1
+
                 if group in ["Date of Approval", "Address Line", "Signatories"] and proj > 1:
                     continue
 
-                # Show only 'Inspection report File number' for projects 2 & 3
                 if group == "Folio References":
                     if label != "Inspection report File number" and proj > 1:
                         continue
 
                 key = f"{row}_P{proj}"
 
-                # Control label formatting
                 if group in ["Date of Approval", "Address Line", "Signatories", "Folio References"] and label != "Inspection report File number":
                     label_suffix = label
                 else:
                     label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
 
-                # Handle different field types
+                # ✅ Set default in session_state if not already
+                if key not in st.session_state:
+                    st.session_state[key] = all_inputs.get(key, "")
+
                 if label == "Address line 2":
-                    client_ministry = all_inputs.get(f"3_P{proj}", "")
-                    all_inputs[key] = st.text_input(label_suffix, value=client_ministry, key=key)
+                    default_ministry = all_inputs.get(f"3_P{proj}", "")
+                    if key not in st.session_state:
+                        st.session_state[key] = default_ministry
+                    st.text_input(label_suffix, key=key)
 
                 elif label in custom_dropdowns:
                     options = custom_dropdowns[label]
-                    default = all_inputs.get(key, options[0])
-
-                    # Safely find the index or fallback to index 0
-                    try:
-                        default_index = options.index(default)
-                    except:
-                        default_index = 0
-                    all_inputs[key] = st.selectbox(label_suffix, options, index=default_index, key=key)
-
+                    default_value = all_inputs.get(key, options[0])
+                    if key not in st.session_state or st.session_state[key] not in options:
+                        st.session_state[key] = default_value
+                    st.selectbox(label_suffix, options, index=options.index(st.session_state[key]), key=key)
 
                 elif row == "18":
-                    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
-                    all_inputs[key] = f"{amount:,.2f}"
+                    amount = calculate_amount_due(st.session_state, proj, show_debug=True)
+                    st.session_state[key] = f"{amount:,.2f}"
                     amount_words = amount_in_words_naira(amount)
-                    all_inputs[f"19_P{proj}"] = amount_words
-                    st.info(f"Calculated Amount Due: ₦{all_inputs[key]}")
+                    st.session_state[f"19_P{proj}"] = amount_words
+                    st.info(f"Calculated Amount Due: ₦{st.session_state[key]}")
                     st.write(f"Amount in Words: {amount_words}")
 
                 elif row == "19":
-                    continue  # skip because already handled in row 18
+                    continue  # handled above
 
                 else:
-                # Always set default value from saved or restored inputs
-                    default = all_inputs.get(key, "")
-                    all_inputs[key] = st.text_input(label_suffix, value=default, key=key)
+                    st.text_input(label_suffix, key=key)
+
 
 contractor = all_inputs.get("7_P1", "Contractor")
 project_name = all_inputs.get("5_P1", "Project Description")
 
 if st.button("Save My Work Offline"):
-    save_data_locally(all_inputs)
+    save_data_locally(dict(st.session_state))
     st.success("Saved successfully with timestamp and recovery file.")
 
 if st.button("Generate Excel"):
