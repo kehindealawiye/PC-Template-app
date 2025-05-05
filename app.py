@@ -151,26 +151,47 @@ if os.path.exists("backups"):
 else:
     backup_files = []
 
-if backup_files:
-    for i, f in enumerate(backup_files):
-        try:
-            data = pd.read_csv(os.path.join("backups", f)).to_dict(orient='records')[0]
-            project = data.get("5_P1", "No Project").strip()
-            contractor = data.get("7_P1", "No Contractor").strip()
+# Preprocess all backups to extract metadata
+backup_metadata = []
+contractors = set()
 
-            # Extract timestamp from filename
-            parts = f.replace(".csv", "").split("_")
-            if len(parts) >= 3:
-                date_part = parts[-2]
-                time_part = parts[-1].replace("-", ":")
-                datetime_str = f"{date_part} {time_part}"
-            else:
-                datetime_str = "Unknown Time"
+for f in backup_files:
+    try:
+        data = pd.read_csv(os.path.join("backups", f)).to_dict(orient='records')[0]
+        project = data.get("5_P1", "No Project").strip()
+        contractor = data.get("7_P1", "No Contractor").strip()
+        contractors.add(contractor)
 
-            title = f"{contractor} | {project} | {datetime_str}"
-        except:
-            title = f"(Unreadable) {f}"
+        # Extract timestamp from filename
+        parts = f.replace(".csv", "").split("_")
+        if len(parts) >= 3:
+            date_part = parts[-2]
+            time_part = parts[-1].replace("-", ":")
+            datetime_str = f"{date_part} {time_part}"
+        else:
+            datetime_str = "Unknown Time"
 
+        title = f"{contractor} | {project} | {datetime_str}"
+        backup_metadata.append((f, title, contractor.lower(), project.lower()))
+    except:
+        backup_metadata.append((f, f"(Unreadable) {f}", "", ""))
+
+# Sidebar filters
+selected_contractor = st.sidebar.selectbox("Filter by Contractor", ["All"] + sorted(contractors))
+search_query = st.sidebar.text_input("Search Project or Contractor", "")
+
+# Filter backups
+filtered_files = []
+for f, title, contractor_lower, project_lower in backup_metadata:
+    if selected_contractor != "All" and contractor_lower != selected_contractor.lower():
+        continue
+    if search_query and search_query.lower() not in title.lower():
+        continue
+    filtered_files.append((f, title))
+
+# Display backups
+if filtered_files:
+    for i, (f, title) in enumerate(filtered_files):
         with st.sidebar.expander(title, expanded=False):
             col1, col2 = st.columns([1.5, 1])
             with col1:
@@ -184,7 +205,6 @@ if backup_files:
                     except Exception as e:
                         st.warning(f"Unable to load selected backup. Error: {e}")
 
-                # Generate Excel for download
                 try:
                     selected_data = pd.read_csv(os.path.join("backups", f)).to_dict(orient='records')[0]
                     project_count = int(selected_data.get("project_count", 1))
@@ -202,6 +222,8 @@ if backup_files:
                     wb.save(excel_buffer)
                     excel_buffer.seek(0)
 
+                    contractor = selected_data.get("7_P1", "no_contractor")
+                    project = selected_data.get("5_P1", "no_project")
                     file_label = f"{contractor}_{project}.xlsx".replace(" ", "_").lower()
                     st.download_button(
                         label="Download Excel",
@@ -218,8 +240,9 @@ if backup_files:
                     st.success(f"Deleted backup: {f}")
                     st.rerun()
 else:
-    st.sidebar.info("No backups found yet. Save your form to create a backup.")
+    st.sidebar.info("No backups found matching your filters.")
 
+# Option to start a new form
 if st.sidebar.button("Start New Blank Form"):
     st.session_state["restored_inputs"] = {}
     if "loaded_filename" in st.session_state:
@@ -249,8 +272,13 @@ for group, fields in field_structure.items():
                 if key not in st.session_state:
                     st.session_state[key] = str(all_inputs.get(key, ""))
 
+                # ✅ Get default value from session_state
+                default = st.session_state.get(key, "")
+                unique_key = f"{group}_{key}"  # ensures uniqueness
+
                 # Render the field
-                st.text_input(label_suffix, value=default, key=unique_key)
+                all_inputs[key] = st.text_input(label_suffix, value=default, key=unique_key)
+
 
                 if label == "Address line 2":
                     default_ministry = all_inputs.get(f"3_P{proj}", "")
