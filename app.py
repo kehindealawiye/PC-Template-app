@@ -223,6 +223,7 @@ if filtered_files:
                     contractor = selected_data.get("7_P1", "no_contractor")
                     project = selected_data.get("5_P1", "no_project")
                     file_label = f"{contractor}_{project}.xlsx".replace(" ", "_").lower()
+
                     st.download_button(
                         label="Download Excel",
                         data=excel_buffer,
@@ -230,3 +231,6 @@ if filtered_files:
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         key=f"download_{i}"
                     )
+                except Exception as e:
+                    st.caption("Failed to generate Excel for download.")
+
