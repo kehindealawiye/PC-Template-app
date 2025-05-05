@@ -229,6 +229,3 @@ if filtered_files:
                         file_name=f"{project_name}_by_{contractor}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     )
-                       
-
- 
