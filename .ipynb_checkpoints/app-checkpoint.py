@@ -155,24 +155,63 @@ if backup_files:
     for i, f in enumerate(backup_files):
         try:
             data = pd.read_csv(os.path.join("backups", f)).to_dict(orient='records')[0]
-            project = data.get("5_P1", "No Project Name")
-            contractor = data.get("7_P1", "No Contractor")
-            title = f"{project} | {contractor} ({f})"
+            project = data.get("5_P1", "No Project").strip()
+            contractor = data.get("7_P1", "No Contractor").strip()
+
+            # Extract timestamp from filename
+            parts = f.replace(".csv", "").split("_")
+            if len(parts) >= 3:
+                date_part = parts[-2]
+                time_part = parts[-1].replace("-", ":")
+                datetime_str = f"{date_part} {time_part}"
+            else:
+                datetime_str = "Unknown Time"
+
+            title = f"{contractor} | {project} | {datetime_str}"
         except:
             title = f"(Unreadable) {f}"
 
         with st.sidebar.expander(title, expanded=False):
-            col1, col2 = st.columns([2, 1])
+            col1, col2 = st.columns([1.5, 1])
             with col1:
                 if st.button(f"Load", key=f"load_{i}"):
                     try:
                         selected_data = pd.read_csv(os.path.join("backups", f)).to_dict(orient='records')[0]
                         st.session_state["restored_inputs"] = selected_data
-                        st.session_state["loaded_filename"] = f  # store filename being edited
+                        st.session_state["loaded_filename"] = f
                         st.success(f"Loaded backup: {f}")
                         st.rerun()
                     except Exception as e:
                         st.warning(f"Unable to load selected backup. Error: {e}")
+
+                # Generate Excel for download
+                try:
+                    selected_data = pd.read_csv(os.path.join("backups", f)).to_dict(orient='records')[0]
+                    project_count = int(selected_data.get("project_count", 1))
+                    wb = load_template(project_count)
+                    ws = wb[details_sheet]
+
+                    project_data = {p: {} for p in range(1, project_count + 1)}
+                    for key, value in selected_data.items():
+                        if "_P" in key:
+                            row, proj = key.split("_P")
+                            project_data[int(proj)][row] = value
+                    write_to_details(ws, project_data, project_columns[project_count])
+
+                    excel_buffer = io.BytesIO()
+                    wb.save(excel_buffer)
+                    excel_buffer.seek(0)
+
+                    file_label = f"{contractor}_{project}.xlsx".replace(" ", "_").lower()
+                    st.download_button(
+                        label="Download Excel",
+                        data=excel_buffer,
+                        file_name=file_label,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key=f"download_{i}"
+                    )
+                except Exception as e:
+                    st.caption("Failed to generate Excel for download.")
             with col2:
                 if st.button("🗑️", key=f"delete_{i}"):
                     os.remove(os.path.join("backups", f))
@@ -216,8 +255,8 @@ for group, fields in field_structure.items():
                 if label == "Address line 2":
                     default_ministry = all_inputs.get(f"3_P{proj}", "")
                     if key not in st.session_state:
-                        st.session_state[key] = default_ministry
-                    st.text_input(label_suffix, key=key)
+                        st.session_state[default_ministry_key] = str(all_inputs.get(default_ministry_key, ""))
+                    all_inputs[key] = st.text_input(label_suffix, value=st.session_state[default_ministry_key], key=key)
 
                 elif label in custom_dropdowns:
                     options = custom_dropdowns[label]
