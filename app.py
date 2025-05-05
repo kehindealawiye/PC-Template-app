@@ -206,9 +206,12 @@ for group, fields in field_structure.items():
                 else:
                     label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
 
-                # ✅ Set default in session_state if not already
+                # ✅ Always set default as string if not already in session_state
                 if key not in st.session_state:
-                    st.session_state[key] = all_inputs.get(key, "")
+                    st.session_state[key] = str(all_inputs.get(key, ""))
+
+                # Render the field
+                st.text_input(label_suffix, key=key)
 
                 if label == "Address line 2":
                     default_ministry = all_inputs.get(f"3_P{proj}", "")
