@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import io
@@ -44,7 +43,6 @@ def save_data_locally(all_inputs):
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         filename = f"backups/{contractor}_{project}_{timestamp}.csv"
         df.to_csv(filename, index=False)
-
 
 def load_saved_data():
     try:
@@ -113,7 +111,7 @@ def calculate_amount_due(inputs, proj, show_debug=False):
         st.write(f"Final Amount Due: ₦{amount_due:,.2f}")
 
     return amount_due
-    
+
 def amount_in_words_naira(amount):
     try:
         naira = int(amount)
@@ -226,126 +224,6 @@ if filtered_files:
                     project = selected_data.get("5_P1", "no_project")
                     file_label = f"{contractor}_{project}.xlsx".replace(" ", "_").lower()
                     st.download_button(
-                        label="Download Excel",
-                        data=excel_buffer,
-                        file_name=file_label,
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        key=f"download_{i}"
-                    )
-                except Exception as e:
-                    st.caption("Failed to generate Excel for download.")
-            with col2:
-                if st.button("🗑️", key=f"delete_{i}"):
-                    os.remove(os.path.join("backups", f))
-                    st.success(f"Deleted backup: {f}")
-                    st.rerun()
-else:
-    st.sidebar.info("No backups found matching your filters.")
-
-# Option to start a new form
-if st.sidebar.button("Start New Blank Form"):
-    st.session_state["restored_inputs"] = {}
-    if "loaded_filename" in st.session_state:
-        del st.session_state["loaded_filename"]
-    st.rerun()
-
-for group, fields in field_structure.items():
-    with st.expander(group, expanded=False):
-        for row, label, _ in fields:
-            for proj in range(1, project_count + 1):
-
-                if group in ["Date of Approval", "Address Line", "Signatories"] and proj > 1:
-                    continue
-
-                if group == "Folio References":
-                    if label != "Inspection report File number" and proj > 1:
-                        continue
-
-                key = f"{row}_P{proj}"
-
-                if group in ["Date of Approval", "Address Line", "Signatories", "Folio References"] and label != "Inspection report File number":
-                    label_suffix = label
-                else:
-                    label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
-
-                # ✅ Always set default as string if not already in session_state
-                if key not in st.session_state:
-                    st.session_state[key] = str(all_inputs.get(key, ""))
-
-                # ✅ Get default value from session_state
-                default = st.session_state.get(key, "")
-                unique_key = f"{group}_{key}"  # ensures uniqueness
-
-                # Render the field
-                all_inputs[key] = st.text_input(label_suffix, value=default, key=unique_key)
-
-
-                if label == "Address line 2":
-                    default_ministry = all_inputs.get(f"3_P{proj}", "")
-                    if key not in st.session_state:
-                        st.session_state[default_ministry_key] = str(all_inputs.get(default_ministry_key, ""))
-                    all_inputs[key] = st.text_input(label_suffix, value=st.session_state[default_ministry_key], key=unique_key)
-
-                elif label in custom_dropdowns:
-                    options = custom_dropdowns[label]
-                    default_value = all_inputs.get(key, options[0])
-                    if key not in st.session_state or st.session_state[key] not in options:
-                        st.session_state[key] = default_value
-                    dropdown_value = st.session_state.get(key, "")
-                if dropdown_value not in options:
-                    dropdown_value = options[0]  # fallback to first option if invalid
-                    st.session_state[key] = dropdown_value  # update session state to valid
-
-                all_inputs[key] = st.selectbox(label_suffix, options, index=options.index(dropdown_value), key=unique_key)
-
-
-                elif row == "18":
-                    amount = calculate_amount_due(st.session_state, proj, show_debug=True)
-                    st.session_state[key] = f"{amount:,.2f}"
-                    amount_words = amount_in_words_naira(amount)
-                    st.session_state[f"19_P{proj}"] = amount_words
-                    st.info(f"Calculated Amount Due: ₦{st.session_state[key]}")
-                    st.write(f"Amount in Words: {amount_words}")
-
-                elif row == "19":
-                    continue  # handled above
-
-                else:
-                    # Ensure the key is unique per field, group, and project
-                    unique_key = f"{group}_{label}_{proj}"
-
-                    # Always use string version of saved value or blank
-                    default = str(all_inputs.get(key, ""))
-
-                    # Save updated value into all_inputs using the original key
-                    all_inputs[key] = st.text_input(label_suffix, value=default, key=unique_key)
-
-
-contractor = all_inputs.get("7_P1", "Contractor")
-project_name = all_inputs.get("5_P1", "Project Description")
-
-if st.button("Save My Work Offline"):
-    save_data_locally(dict(st.session_state))
-    st.success("Saved successfully with timestamp and recovery file.")
-
-if st.button("Generate Excel"):
-    wb = load_template(project_count)
-    ws = wb[details_sheet]
-    project_data = {p: {} for p in range(1, project_count + 1)}
-    for key, value in all_inputs.items():
-        if "_P" in key:
-            row, proj = key.split("_P")
-            project_data[int(proj)][row] = value
-    write_to_details(ws, project_data, column_map)
-
-    buffer = io.BytesIO()
-    wb.save(buffer)
-    buffer.seek(0)
-    st.success("Excel file is ready.")
-    st.download_button(
-        label="Download Filled Excel",
-        data=buffer,
-        file_name=f"{project_name}_by_{contractor}.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-   
+                       
+::contentReference[oaicite:13]{index=13}
+ 
