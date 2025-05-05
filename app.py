@@ -224,8 +224,9 @@ if filtered_files:
                     project = selected_data.get("5_P1", "no_project")
                     file_label = f"{contractor}_{project}.xlsx".replace(" ", "_").lower()
                     st.download_button(
-                        label="Download Filled Excel",
-                        data=buffer,
-                        file_name=f"{project_name}_by_{contractor}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        label="Download Excel",
+                        data=excel_buffer,
+                        file_name=file_label,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key=f"download_{i}"
                     )
