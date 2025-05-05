@@ -291,7 +291,13 @@ for group, fields in field_structure.items():
                     default_value = all_inputs.get(key, options[0])
                     if key not in st.session_state or st.session_state[key] not in options:
                         st.session_state[key] = default_value
-                    st.selectbox(label_suffix, options, index=options.index(st.session_state[key]), key=unique_key)
+                    dropdown_value = st.session_state.get(key, "")
+                if dropdown_value not in options:
+                    dropdown_value = options[0]  # fallback to first option if invalid
+                    st.session_state[key] = dropdown_value  # update session state to valid
+
+                all_inputs[key] = st.selectbox(label_suffix, options, index=options.index(dropdown_value), key=unique_key)
+
 
                 elif row == "18":
                     amount = calculate_amount_due(st.session_state, proj, show_debug=True)
