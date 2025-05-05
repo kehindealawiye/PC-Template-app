@@ -250,20 +250,20 @@ for group, fields in field_structure.items():
                     st.session_state[key] = str(all_inputs.get(key, ""))
 
                 # Render the field
-                st.text_input(label_suffix, key=key)
+                st.text_input(label_suffix, value=default, key=unique_key)
 
                 if label == "Address line 2":
                     default_ministry = all_inputs.get(f"3_P{proj}", "")
                     if key not in st.session_state:
                         st.session_state[default_ministry_key] = str(all_inputs.get(default_ministry_key, ""))
-                    all_inputs[key] = st.text_input(label_suffix, value=st.session_state[default_ministry_key], key=key)
+                    all_inputs[key] = st.text_input(label_suffix, value=st.session_state[default_ministry_key], key=unique_key)
 
                 elif label in custom_dropdowns:
                     options = custom_dropdowns[label]
                     default_value = all_inputs.get(key, options[0])
                     if key not in st.session_state or st.session_state[key] not in options:
                         st.session_state[key] = default_value
-                    st.selectbox(label_suffix, options, index=options.index(st.session_state[key]), key=key)
+                    st.selectbox(label_suffix, options, index=options.index(st.session_state[key]), key=unique_key)
 
                 elif row == "18":
                     amount = calculate_amount_due(st.session_state, proj, show_debug=True)
@@ -277,7 +277,8 @@ for group, fields in field_structure.items():
                     continue  # handled above
 
                 else:
-                    st.text_input(label_suffix, key=key)
+                    unique_key = f"{group}_{key}"
+                    st.text_input(label_suffix, value=default, key=unique_key)
 
 
 contractor = all_inputs.get("7_P1", "Contractor")
