@@ -29,14 +29,22 @@ custom_dropdowns = {
 }
 
 def save_data_locally(all_inputs):
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    project = all_inputs.get("5_P1", "project").replace(" ", "_").lower()
-    contractor = all_inputs.get("7_P1", "contractor").replace(" ", "_").lower()
-    filename = f"backups/{contractor}_{project}_{timestamp}.csv"
-
-    os.makedirs("backups", exist_ok=True)
     df = pd.DataFrame([all_inputs])
-    df.to_csv(filename, index=False)
+    os.makedirs("backups", exist_ok=True)
+
+    # Always save latest form
+    df.to_csv("saved_form_data.csv", index=False)
+
+    # Overwrite loaded file if one is being edited
+    if "loaded_filename" in st.session_state:
+        df.to_csv(os.path.join("backups", st.session_state["loaded_filename"]), index=False)
+    else:
+        contractor = all_inputs.get("7_P1", "NoContractor").replace(" ", "_").lower()
+        project = all_inputs.get("5_P1", "NoProject").replace(" ", "_").lower()
+        username = all_inputs.get("6_P1", "Anonymous").replace(" ", "_").lower()
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"backups/{contractor}_{project}_{username}_{timestamp}.csv"
+        df.to_csv(filename, index=False)
 
 
 def load_saved_data():
@@ -161,6 +169,7 @@ if backup_files:
                     try:
                         selected_data = pd.read_csv(os.path.join("backups", f)).to_dict(orient='records')[0]
                         st.session_state["restored_inputs"] = selected_data
+                        st.session_state["loaded_filename"] = f  # store filename being edited
                         st.success(f"Loaded backup: {f}")
                         st.rerun()
                     except Exception as e:
@@ -175,6 +184,8 @@ else:
 
 if st.sidebar.button("Start New Blank Form"):
     st.session_state["restored_inputs"] = {}
+    if "loaded_filename" in st.session_state:
+        del st.session_state["loaded_filename"]
     st.rerun()
 
 for group, fields in field_structure.items():
