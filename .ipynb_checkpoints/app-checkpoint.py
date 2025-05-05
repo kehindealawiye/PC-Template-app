@@ -30,14 +30,14 @@ custom_dropdowns = {
 
 def save_data_locally(all_inputs):
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    filename = f"backups/form_backup_{timestamp}.csv"
-    df = pd.DataFrame([all_inputs])
+    project = all_inputs.get("5_P1", "project").replace(" ", "_").lower()
+    contractor = all_inputs.get("7_P1", "contractor").replace(" ", "_").lower()
+    filename = f"backups/{contractor}_{project}_{timestamp}.csv"
 
-    # Ensure backups folder exists
     os.makedirs("backups", exist_ok=True)
+    df = pd.DataFrame([all_inputs])
+    df.to_csv(filename, index=False)
 
-    df.to_csv("saved_form_data.csv", index=False)  # still save latest form for auto-recovery
-    df.to_csv(filename, index=False)  # save timestamped backup inside backups/
 
 def load_saved_data():
     try:
@@ -128,46 +128,48 @@ field_structure = load_field_structure()
 if "restored_inputs" in st.session_state:
     all_inputs = st.session_state.pop("restored_inputs")
 else:
-    all_inputs = load_saved_data()
+    all_inputs = {}  # load a completely blank form by default
 
 for k, v in all_inputs.items():
     if pd.isna(v):
         all_inputs[k] = ""
 
-st.sidebar.subheader("Load a Saved Form")
+st.sidebar.subheader("Manage Saved Forms")
 
 if os.path.exists("backups"):
     backup_files = sorted(
-        [f for f in os.listdir("backups") if f.startswith("form_backup_") and f.endswith(".csv")],
+        [f for f in os.listdir("backups") if f.endswith(".csv")],
         reverse=True
     )
 else:
     backup_files = []
 
-# Build preview-friendly display names
-backup_titles = []
-for f in backup_files:
-    try:
-        data = pd.read_csv(os.path.join("backups", f)).to_dict(orient='records')[0]
-        project = data.get("5_P1", "No Project Name")
-        contractor = data.get("7_P1", "No Contractor")
-        backup_titles.append(f"{project} | {contractor} ({f})")
-    except:
-        backup_titles.append(f"(Unreadable) {f}")
-
-# Let user choose based on title
-if backup_titles:
-    selected_title = st.sidebar.selectbox("Select backup to load", backup_titles)
-    selected_file = backup_files[backup_titles.index(selected_title)]
-
-    if st.sidebar.button("Load Selected Backup"):
+if backup_files:
+    for i, f in enumerate(backup_files):
         try:
-            selected_data = pd.read_csv(os.path.join("backups", selected_file)).to_dict(orient='records')[0]
-            st.session_state["restored_inputs"] = selected_data
-            st.success(f"Loaded backup: {selected_title}")
-            st.rerun()
-        except Exception as e:
-            st.warning(f"Unable to load selected backup. Error: {e}")
+            data = pd.read_csv(os.path.join("backups", f)).to_dict(orient='records')[0]
+            project = data.get("5_P1", "No Project Name")
+            contractor = data.get("7_P1", "No Contractor")
+            title = f"{project} | {contractor} ({f})"
+        except:
+            title = f"(Unreadable) {f}"
+
+        with st.sidebar.expander(title, expanded=False):
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                if st.button(f"Load", key=f"load_{i}"):
+                    try:
+                        selected_data = pd.read_csv(os.path.join("backups", f)).to_dict(orient='records')[0]
+                        st.session_state["restored_inputs"] = selected_data
+                        st.success(f"Loaded backup: {f}")
+                        st.rerun()
+                    except Exception as e:
+                        st.warning(f"Unable to load selected backup. Error: {e}")
+            with col2:
+                if st.button("🗑️", key=f"delete_{i}"):
+                    os.remove(os.path.join("backups", f))
+                    st.success(f"Deleted backup: {f}")
+                    st.rerun()
 else:
     st.sidebar.info("No backups found yet. Save your form to create a backup.")
 
