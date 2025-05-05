@@ -305,8 +305,14 @@ for group, fields in field_structure.items():
                     continue  # handled above
 
                 else:
-                    unique_key = f"{group}_{key}"
-                    st.text_input(label_suffix, value=default, key=unique_key)
+                    # Ensure the key is unique per field, group, and project
+                    unique_key = f"{group}_{label}_{proj}"
+
+                    # Always use string version of saved value or blank
+                    default = str(all_inputs.get(key, ""))
+
+                    # Save updated value into all_inputs using the original key
+                    all_inputs[key] = st.text_input(label_suffix, value=default, key=unique_key)
 
 
 contractor = all_inputs.get("7_P1", "Contractor")
