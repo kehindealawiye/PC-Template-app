@@ -328,14 +328,27 @@ for group, fields in field_structure.items():
 # === 🧮 AMOUNT CALCULATION & DEBUG DISPLAY ===
 for proj in range(1, project_count + 1):
     try:
+        # 🧼 Clean and update session state for all required rows (10–17)
+        for row in ["10", "11", "12", "13", "14", "15", "16", "17"]:
+            key = f"{row}_P{proj}"
+            raw_val = st.session_state.get(key, "")
+            try:
+                clean_val = str(raw_val).replace(",", "").replace("%", "").strip()
+                st.session_state[key] = float(clean_val) if clean_val else 0.0
+            except:
+                st.session_state[key] = 0.0
+
+        # ✅ Perform calculation
         amount = calculate_amount_due(st.session_state, proj, show_debug=True)
         st.session_state[f"18_P{proj}"] = f"{amount:,.2f}"
         amount_words = amount_in_words_naira(amount)
         st.session_state[f"19_P{proj}"] = amount_words
 
+        # ✅ Show debug summary
         st.markdown(f"### 💰 Summary for Project {proj}")
         st.success(f"Calculated Amount Due: ₦{st.session_state[f'18_P{proj}']}")
         st.caption(f"Amount in Words: {amount_words}")
+
     except Exception as e:
         st.warning(f"Could not calculate amount due for Project {proj}. Error: {e}")
 
