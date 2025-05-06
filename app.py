@@ -46,7 +46,7 @@ def save_data_locally(all_inputs):
         project = re.sub(r'[^\w\-]', '_', project) or "no_project"
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        filename = f"backups/{contractor.lower()}_{project.lower()}_{timestamp}.csv"
+        filename = f"backups/{contractor}-{project}-{timestamp}.csv".replace(" ", "_").lower()
         df.to_csv(filename, index=False)
 
 def load_saved_data():
@@ -109,6 +109,8 @@ def calculate_amount_due(inputs, proj, show_debug=False):
         st.write(f"Advance Refund %: {advance_refund_pct*100}% → ₦{advance_refund_amount:,.2f}")
         st.write(f"Previous Payment: ₦{previous_payment:,.2f}")
         st.write(f"Final Amount Due: ₦{amount_due:,.2f}")
+        amount_words = amount_in_words_naira(amount_due)
+        st.caption(f"📝 Amount in Words: {amount_words}")
 
     return amount_due
 
@@ -191,7 +193,7 @@ filtered_files = []
 for f, title, contractor_lower, project_lower in backup_metadata:
     if selected_contractor != "All" and contractor_lower != selected_contractor.lower():
         continue
-    if search_query and search_query.lower() not in title.lower():
+    if search_query and not (search_query.lower() in contractor_lower or search_query.lower() in project_lower):
         continue
     filtered_files.append((f, title))
 
