@@ -206,23 +206,30 @@ if filtered_files:
 
                 try:
                     selected_data = pd.read_csv(os.path.join("backups", f)).to_dict(orient='records')[0]
+
+                    # Ensure fallback defaults if critical fields are missing
                     project_count = int(selected_data.get("project_count", 1))
+                    contractor = selected_data.get("7_P1", "no_contractor") or "no_contractor"
+                    project = selected_data.get("5_P1", "no_project") or "no_project"
+
                     wb = load_template(project_count)
                     ws = wb[details_sheet]
 
                     project_data = {p: {} for p in range(1, project_count + 1)}
                     for key, value in selected_data.items():
                         if "_P" in key:
-                            row, proj = key.split("_P")
-                            project_data[int(proj)][row] = value
+                            try:
+                                row, proj = key.split("_P")
+                                project_data[int(proj)][row] = value
+                            except:
+                                continue  # skip malformed keys
+
                     write_to_details(ws, project_data, project_columns[project_count])
 
                     excel_buffer = io.BytesIO()
                     wb.save(excel_buffer)
                     excel_buffer.seek(0)
 
-                    contractor = selected_data.get("7_P1", "no_contractor")
-                    project = selected_data.get("5_P1", "no_project")
                     file_label = f"{contractor}_{project}.xlsx".replace(" ", "_").lower()
                     st.download_button(
                         label="Download Excel",
@@ -232,7 +239,7 @@ if filtered_files:
                         key=f"download_{i}"
                     )
                 except Exception as e:
-                    st.caption("Failed to generate Excel for download.")
+                    st.caption(f"Failed to generate Excel for download. Error: {e}")
             with col2:
                 if st.button("🗑️", key=f"delete_{i}"):
                     os.remove(os.path.join("backups", f))
@@ -240,6 +247,7 @@ if filtered_files:
                     st.rerun()
 else:
     st.sidebar.info("No backups found matching your filters.")
+
 
 # Option to start a new form
 if st.sidebar.button("Start New Blank Form"):
