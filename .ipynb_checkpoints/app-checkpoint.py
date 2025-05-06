@@ -273,7 +273,7 @@ for group, fields in field_structure.items():
 
                 # ✅ Get default value from session_state
                 default = st.session_state.get(key, "")
-                unique_key = f"{group}_{key}"  # ensures uniqueness
+                unique_key = f"{group}_{label}_{proj}_{row}_select" # ensures uniqueness
 
                 # Render the field
                 all_inputs[key] = st.text_input(label_suffix, value=default, key=unique_key)
