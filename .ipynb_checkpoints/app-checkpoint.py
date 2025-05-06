@@ -89,7 +89,7 @@ def calculate_amount_due(inputs, proj, show_debug=False):
     retention_pct = get("14") / 100
     previous_payment = get("15")
     advance_refund_pct = get("16") / 100
-    vat_pct = get(f"vat_P{proj}") / 100
+    vat_pct = get("17") / 100
 
     advance_payment = contract_sum * advance_payment_pct
     retention = work_completed * retention_pct
@@ -106,7 +106,7 @@ def calculate_amount_due(inputs, proj, show_debug=False):
         st.write(f"Work Completed: ₦{work_completed:,.2f}")
         st.write(f"Retention %: {retention_pct*100}% → ₦{retention:,.2f}")
         st.write(f"Total Net Payment: ₦{total_net_payment:,.2f}")
-        st.write(f"VAT %: {vat_pct*100}% → ₦{vat:,.2f}")
+        st.write(f"VAT %: {vat_pct * 100:.1f}% → ₦{vat:,.2f}")
         st.write(f"Total Net Amount: ₦{total_net_amount:,.2f}")
         st.write(f"Advance Refund %: {advance_refund_pct*100}% → ₦{advance_refund_amount:,.2f}")
         st.write(f"Previous Payment: ₦{previous_payment:,.2f}")
@@ -139,11 +139,6 @@ else:
 for k, v in all_inputs.items():
     if pd.isna(v):
         all_inputs[k] = ""
-
-# Capture VAT inputs early
-for proj in range(1, project_count + 1):
-    vat_key = f"vat_P{proj}"
-    all_inputs[vat_key] = st.text_input(f"VAT % – Project {proj}", value="7.5", key=vat_key)
 
 st.sidebar.subheader("Manage Saved Forms")
 if os.path.exists("backups"):
