@@ -38,10 +38,16 @@ def save_data_locally(all_inputs):
     if "loaded_filename" in st.session_state:
         df.to_csv(os.path.join("backups", st.session_state["loaded_filename"]), index=False)
     else:
-        contractor = all_inputs.get("7_P1", "NoContractor").replace(" ", "_").lower()
-        project = all_inputs.get("5_P1", "NoProject").replace(" ", "_").lower()
+        contractor = str(all_inputs.get("7_P1", "") or "").strip()
+        project = str(all_inputs.get("5_P1", "") or "").strip()
+
+        if not contractor:
+            contractor = "no_contractor"
+        if not project:
+            project = "no_project"
+
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        filename = f"backups/{contractor}_{project}_{timestamp}.csv"
+        filename = f"backups/{contractor.replace(' ', '_').lower()}_{project.replace(' ', '_').lower()}_{timestamp}.csv"
         df.to_csv(filename, index=False)
 
 
