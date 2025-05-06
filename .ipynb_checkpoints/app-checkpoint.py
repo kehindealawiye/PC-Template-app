@@ -282,8 +282,8 @@ for group, fields in field_structure.items():
                 if label == "Address line 2":
                     default_ministry = all_inputs.get(f"3_P{proj}", "")
                     if key not in st.session_state:
-                        st.session_state[default_ministry_key] = str(all_inputs.get(default_ministry_key, ""))
-                    all_inputs[key] = st.text_input(label_suffix, value=st.session_state[default_ministry_key], key=unique_key)
+                        st.session_state[key] = str(default_ministry)
+                    all_inputs[key] = st.text_input(label_suffix, value=st.session_state[key], key=unique_key)
 
                 elif label in custom_dropdowns:
                     options = custom_dropdowns[label]
@@ -291,22 +291,21 @@ for group, fields in field_structure.items():
                     if key not in st.session_state or st.session_state[key] not in options:
                         st.session_state[key] = default_value
                     dropdown_value = st.session_state.get(key, "")
-                if dropdown_value not in options:
-                    dropdown_value = options[0]  # fallback to first option if invalid
-                    st.session_state[key] = dropdown_value  # update session state to valid
-
-                all_inputs[key] = st.selectbox(label_suffix, options, index=options.index(dropdown_value), key=unique_key)
+                    if dropdown_value not in options:
+                        dropdown_value = options[0]  # fallback
+                        st.session_state[key] = dropdown_value
+                    all_inputs[key] = st.selectbox(label_suffix, options, index=options.index(dropdown_value), key=unique_key)
 
                 elif row == "18":
                     amount = calculate_amount_due(st.session_state, proj, show_debug=True)
                     st.session_state[key] = f"{amount:,.2f}"
                     amount_words = amount_in_words_naira(amount)
-                    st.session_state[f"19_P{proj}"] = amount_words
+                    str.session_state[f"19_P{proj}"] = amount_words
                     st.info(f"Calculated Amount Due: ₦{st.session_state[key]}")
                     st.write(f"Amount in Words: {amount_words}")
 
                 elif row == "19":
-                    continue  # handled above
+                    continue  # handled above0
 
                 else:
                     # Ensure the key is unique per field, group, and project
