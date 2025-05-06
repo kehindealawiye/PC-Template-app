@@ -2,8 +2,6 @@
 import streamlit as st
 import pandas as pd
 import io
-import os
-from datetime import datetime
 from openpyxl import load_workbook
 from num2words import num2words
 
@@ -48,7 +46,7 @@ def save_data_locally(all_inputs):
         project = re.sub(r'[^\w\-]', '_', project) or "no_project"
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        filename = f"backups/{contractor}-{project}-{timestamp}.csv".replace(" ", "_").lower()
+        filename = f"backups/{contractor.lower()}_{project.lower()}_{timestamp}.csv"
         df.to_csv(filename, index=False)
 
 def load_saved_data():
@@ -89,7 +87,7 @@ def calculate_amount_due(inputs, proj, show_debug=False):
     retention_pct = get("14") / 100
     previous_payment = get("15")
     advance_refund_pct = get("16") / 100
-    vat_pct = get("17") / 100
+    vat_pct = get(f"vat_P{proj}") / 100
 
     advance_payment = contract_sum * advance_payment_pct
     retention = work_completed * retention_pct
@@ -106,13 +104,11 @@ def calculate_amount_due(inputs, proj, show_debug=False):
         st.write(f"Work Completed: ₦{work_completed:,.2f}")
         st.write(f"Retention %: {retention_pct*100}% → ₦{retention:,.2f}")
         st.write(f"Total Net Payment: ₦{total_net_payment:,.2f}")
-        st.write(f"VAT %: {vat_pct * 100:.1f}% → ₦{vat:,.2f}")
+        st.write(f"VAT %: {vat_pct*100}% → ₦{vat:,.2f}")
         st.write(f"Total Net Amount: ₦{total_net_amount:,.2f}")
         st.write(f"Advance Refund %: {advance_refund_pct*100}% → ₦{advance_refund_amount:,.2f}")
         st.write(f"Previous Payment: ₦{previous_payment:,.2f}")
         st.write(f"Final Amount Due: ₦{amount_due:,.2f}")
-        amount_words = amount_in_words_naira(amount_due)
-        st.caption(f"📝 Amount in Words: {amount_words}")
 
     return amount_due
 
@@ -139,6 +135,11 @@ else:
 for k, v in all_inputs.items():
     if pd.isna(v):
         all_inputs[k] = ""
+
+# Capture VAT inputs early
+for proj in range(1, project_count + 1):
+    vat_key = f"vat_P{proj}"
+    all_inputs[vat_key] = st.text_input(f"VAT % – Project {proj}", value="7.5", key=vat_key)
 
 st.sidebar.subheader("Manage Saved Forms")
 if os.path.exists("backups"):
@@ -190,7 +191,7 @@ filtered_files = []
 for f, title, contractor_lower, project_lower in backup_metadata:
     if selected_contractor != "All" and contractor_lower != selected_contractor.lower():
         continue
-    if search_query and not (search_query.lower() in contractor_lower or search_query.lower() in project_lower):
+    if search_query and search_query.lower() not in title.lower():
         continue
     filtered_files.append((f, title))
 
@@ -311,19 +312,21 @@ for group, fields in field_structure.items():
                         label_suffix, options, index=options.index(dropdown_value), key=widget_key
                     )
 
-                elif row == "18":
-                    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
-                    all_inputs[key] = f"{amount:,.2f}"
-                    st.info(f"Calculated Amount Due for Project {proj}: ₦{all_inputs[key]}")
-                    amount_words = amount_in_words_naira(amount)
-                    all_inputs[f"19_P{proj}"] = amount_words
-                    st.caption(f"📝 Amount in Words: {amount_words}")
-
                 # Row 19 – skip (auto-filled)
                 elif row == "19":
                     continue
 
                 # Default text input
+
+st.markdown("---")
+st.header("💡 Amount Due Summary")
+
+for proj in range(1, project_count + 1):
+    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
+    amount_words = amount_in_words_naira(amount)
+    all_inputs[f"18_P{proj}"] = f"{amount:,.2f}"
+    all_inputs[f"19_P{proj}"] = amount_words
+
                 else:
                     all_inputs[key] = st.text_input(label_suffix, value=default, key=widget_key)
 
