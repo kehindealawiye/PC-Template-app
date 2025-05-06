@@ -28,6 +28,7 @@ custom_dropdowns = {
 }
 
 def save_data_locally(all_inputs):
+    import re  # For safe filename cleaning
     df = pd.DataFrame([all_inputs])
     os.makedirs("backups", exist_ok=True)
 
@@ -38,18 +39,17 @@ def save_data_locally(all_inputs):
     if "loaded_filename" in st.session_state:
         df.to_csv(os.path.join("backups", st.session_state["loaded_filename"]), index=False)
     else:
+        # Safely get and clean contractor and project names
         contractor = str(all_inputs.get("7_P1", "") or "").strip()
         project = str(all_inputs.get("5_P1", "") or "").strip()
 
-        if not contractor:
-            contractor = "no_contractor"
-        if not project:
-            project = "no_project"
+        # Replace invalid characters with underscore
+        contractor = re.sub(r'[^\w\-]', '_', contractor) or "no_contractor"
+        project = re.sub(r'[^\w\-]', '_', project) or "no_project"
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        filename = f"backups/{contractor.replace(' ', '_').lower()}_{project.replace(' ', '_').lower()}_{timestamp}.csv"
+        filename = f"backups/{contractor.lower()}_{project.lower()}_{timestamp}.csv"
         df.to_csv(filename, index=False)
-
 
 def load_saved_data():
     try:
@@ -270,56 +270,57 @@ if st.sidebar.button("Start New Blank Form"):
     st.rerun()
 
 for group, fields in field_structure.items():
-    with st.expander(group, expanded=False):
+    with st.expander(group, expanded=False):  # 🧩 Each field group in an expandable section
         for row, label, _ in fields:
-            for proj in range(1, project_count + 1):
+            for proj in range(1, project_count + 1):  # 🔁 Repeat for each project (1–3)
 
+                # 🛑 Skip some sections for projects beyond 1
                 if group in ["Date of Approval", "Address Line", "Signatories"] and proj > 1:
                     continue
-
                 if group == "Folio References" and label != "Inspection report File number" and proj > 1:
                     continue
 
-                key = f"{row}_P{proj}"
+                key = f"{row}_P{proj}"  # 🔑 Base key per field per project
+                label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
 
+                # 📝 For shared fields like Address Line 1, don't suffix label
                 if group in ["Date of Approval", "Address Line", "Signatories", "Folio References"] and label != "Inspection report File number":
                     label_suffix = label
-                else:
-                    label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
 
-                # Always set default as string if not already in session_state
+                # 🔄 Set default in session_state if not already set
                 if key not in st.session_state:
                     st.session_state[key] = str(all_inputs.get(key, ""))
 
                 default = st.session_state.get(key, "")
+                widget_key = f"{group}_{label}_{proj}_{row}"  # 🛡 Unique widget key to prevent duplication
 
-                # Calculate widget type and unique key
-                if label in custom_dropdowns:
-                    widget_type = "select"
-                else:
-                    widget_type = "text"
-                unique_key = f"{group}_{label}_{proj}_{row}_{widget_type}"
-
-                # Special logic for "Address line 2"
+                # 🏢 Auto-fill "Address line 2" with ministry name (from Row 3)
                 if label == "Address line 2":
                     default_ministry = all_inputs.get(f"3_P{proj}", "")
-                    if key not in st.session_state:
-                        st.session_state[key] = str(default_ministry)
-                    all_inputs[key] = st.text_input(label_suffix, value=st.session_state[key], key=unique_key)
+                    st.session_state[key] = str(default_ministry)
+                    all_inputs[key] = st.text_input(label_suffix, value=st.session_state[key], key=widget_key)
 
-                # Dropdowns
+                # ⬇ Render dropdowns if field has custom dropdown values
                 elif label in custom_dropdowns:
                     options = custom_dropdowns[label]
                     default_value = all_inputs.get(key, options[0])
+
                     if key not in st.session_state or st.session_state[key] not in options:
                         st.session_state[key] = default_value
-                    dropdown_value = st.session_state.get(key, "")
+
+                    dropdown_value = st.session_state[key]
                     if dropdown_value not in options:
                         dropdown_value = options[0]
                         st.session_state[key] = dropdown_value
-                    all_inputs[key] = st.selectbox(label_suffix, options, index=options.index(dropdown_value), key=unique_key)
 
-                # Auto-calculated amount due
+                    all_inputs[key] = st.selectbox(
+                        label_suffix,
+                        options,
+                        index=options.index(dropdown_value),
+                        key=widget_key
+                    )
+
+                # 🧮 Amount Due calculation (Row 18) and auto-fill Row 19
                 elif row == "18":
                     amount = calculate_amount_due(st.session_state, proj, show_debug=True)
                     st.session_state[key] = f"{amount:,.2f}"
@@ -327,14 +328,16 @@ for group, fields in field_structure.items():
                     st.session_state[f"19_P{proj}"] = amount_words
                     st.info(f"Calculated Amount Due: ₦{st.session_state[key]}")
                     st.write(f"Amount in Words: {amount_words}")
+                    all_inputs[key] = st.session_state[key]
 
-                # Skip row 19 (already handled)
+                # 🚫 Skip rendering Row 19 (already handled above)
                 elif row == "19":
                     continue
 
-                # All other text inputs
+                # 🧾 Default: render as text_input
                 else:
-                    all_inputs[key] = st.text_input(label_suffix, value=default, key=unique_key)
+                    all_inputs[key] = st.text_input(label_suffix, value=default, key=widget_key)
+
 
 contractor = all_inputs.get("7_P1", "Contractor")
 project_name = all_inputs.get("5_P1", "Project Description")
