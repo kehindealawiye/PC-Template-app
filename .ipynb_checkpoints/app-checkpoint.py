@@ -266,8 +266,7 @@ if st.sidebar.button("Start New Blank Form"):
 contractor = all_inputs.get("7_P1", "Contractor")
 project_name = all_inputs.get("5_P1", "Project Description")
 
-
-# Main form logic
+# === 🧩 FORM ENTRY BLOCK ===
 for group, fields in field_structure.items():
     with st.expander(group, expanded=False):
         for row, label, _ in fields:
@@ -310,19 +309,13 @@ for group, fields in field_structure.items():
                         label_suffix, options, index=options.index(dropdown_value), key=widget_key
                     )
 
-                elif row == "18":
-                    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
-                    all_inputs[key] = f"{amount:,.2f}"
-                    st.info(f"Calculated Amount Due for Project {proj}: ₦{all_inputs[key]}")
-                    amount_words = amount_in_words_naira(amount)
-                    all_inputs[f"19_P{proj}"] = amount_words
-                    st.caption(f"📝 Amount in Words: {amount_words}")
-
                 # Row 19 – skip (auto-filled)
                 elif row == "19":
                     continue
 
                 # Default text input
+                else:
+                    all_inputs[key] = st.text_input(label_suffix, value=default, key=widget_key)
 
 st.markdown("---")
 st.header("💡 Amount Due Summary")
