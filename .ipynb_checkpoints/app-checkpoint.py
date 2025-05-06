@@ -155,16 +155,18 @@ backup_metadata = []
 contractors = set()
 
 for f in backup_files:
-    file_path = os.path.join("backups", f)
     try:
-        df = pd.read_csv(file_path)
-        if df.empty:
-            raise ValueError("Empty CSV")
-        data = df.to_dict(orient='records')[0]
-        project = data.get("5_P1", "No Project").strip()
-        contractor = data.get("7_P1", "No Contractor").strip()
+        data = pd.read_csv(os.path.join("backups", f)).to_dict(orient='records')[0]
+
+        project = str(data.get("5_P1", "") or "").strip()
+        contractor = str(data.get("7_P1", "") or "").strip()
+
+        if not project or not contractor:
+            raise ValueError("Missing key metadata.")
+
         contractors.add(contractor)
 
+        # Extract timestamp from filename
         parts = f.replace(".csv", "").split("_")
         if len(parts) >= 3:
             date_part = parts[-2]
@@ -175,7 +177,9 @@ for f in backup_files:
 
         title = f"{contractor} | {project} | {datetime_str}"
         backup_metadata.append((f, title, contractor.lower(), project.lower()))
+
     except Exception as e:
+        # fallback
         backup_metadata.append((f, f"(Unreadable) {f}", "", ""))
 
 # Sidebar filters
