@@ -327,8 +327,8 @@ for proj in range(1, project_count + 1):
     all_inputs[f"18_P{proj}"] = f"{amount:,.2f}"
     all_inputs[f"19_P{proj}"] = amount_words
 
-                else:
-                    all_inputs[key] = st.text_input(label_suffix, value=default, key=widget_key)
+else:
+    all_inputs[key] = st.text_input(label_suffix, value=default, key=widget_key)
 
 # Capture some general values
 contractor = all_inputs.get("7_P1", "Contractor")
