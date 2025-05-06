@@ -256,9 +256,8 @@ for group, fields in field_structure.items():
                 if group in ["Date of Approval", "Address Line", "Signatories"] and proj > 1:
                     continue
 
-                if group == "Folio References":
-                    if label != "Inspection report File number" and proj > 1:
-                        continue
+                if group == "Folio References" and label != "Inspection report File number" and proj > 1:
+                    continue
 
                 key = f"{row}_P{proj}"
 
@@ -267,24 +266,27 @@ for group, fields in field_structure.items():
                 else:
                     label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
 
-                # ✅ Always set default as string if not already in session_state
+                # Always set default as string if not already in session_state
                 if key not in st.session_state:
                     st.session_state[key] = str(all_inputs.get(key, ""))
 
-                # ✅ Get default value from session_state
                 default = st.session_state.get(key, "")
-                unique_key = f"{group}_{label}_{proj}_{row}_select" # ensures uniqueness
 
-                # Render the field
-                all_inputs[key] = st.text_input(label_suffix, value=default, key=unique_key)
+                # Calculate widget type and unique key
+                if label in custom_dropdowns:
+                    widget_type = "select"
+                else:
+                    widget_type = "text"
+                unique_key = f"{group}_{label}_{proj}_{row}_{widget_type}"
 
-
+                # Special logic for "Address line 2"
                 if label == "Address line 2":
                     default_ministry = all_inputs.get(f"3_P{proj}", "")
                     if key not in st.session_state:
                         st.session_state[key] = str(default_ministry)
                     all_inputs[key] = st.text_input(label_suffix, value=st.session_state[key], key=unique_key)
 
+                # Dropdowns
                 elif label in custom_dropdowns:
                     options = custom_dropdowns[label]
                     default_value = all_inputs.get(key, options[0])
@@ -292,31 +294,26 @@ for group, fields in field_structure.items():
                         st.session_state[key] = default_value
                     dropdown_value = st.session_state.get(key, "")
                     if dropdown_value not in options:
-                        dropdown_value = options[0]  # fallback
+                        dropdown_value = options[0]
                         st.session_state[key] = dropdown_value
                     all_inputs[key] = st.selectbox(label_suffix, options, index=options.index(dropdown_value), key=unique_key)
 
+                # Auto-calculated amount due
                 elif row == "18":
                     amount = calculate_amount_due(st.session_state, proj, show_debug=True)
                     st.session_state[key] = f"{amount:,.2f}"
                     amount_words = amount_in_words_naira(amount)
-                    str.session_state[f"19_P{proj}"] = amount_words
+                    st.session_state[f"19_P{proj}"] = amount_words
                     st.info(f"Calculated Amount Due: ₦{st.session_state[key]}")
                     st.write(f"Amount in Words: {amount_words}")
 
+                # Skip row 19 (already handled)
                 elif row == "19":
-                    continue  # handled above0
+                    continue
 
+                # All other text inputs
                 else:
-                    # Ensure the key is unique per field, group, and project
-                    unique_key = f"{group}_{label}_{proj}"
-
-                    # Always use string version of saved value or blank
-                    default = str(all_inputs.get(key, ""))
-
-                    # Save updated value into all_inputs using the original key
                     all_inputs[key] = st.text_input(label_suffix, value=default, key=unique_key)
-
 
 contractor = all_inputs.get("7_P1", "Contractor")
 project_name = all_inputs.get("5_P1", "Project Description")
