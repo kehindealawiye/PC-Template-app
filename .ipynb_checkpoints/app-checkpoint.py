@@ -311,6 +311,14 @@ for group, fields in field_structure.items():
                         label_suffix, options, index=options.index(dropdown_value), key=widget_key
                     )
 
+                elif row == "18":
+                    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
+                    all_inputs[key] = f"{amount:,.2f}"
+                    st.info(f"Calculated Amount Due for Project {proj}: ₦{all_inputs[key]}")
+                    amount_words = amount_in_words_naira(amount)
+                    all_inputs[f"19_P{proj}"] = amount_words
+                    st.caption(f"📝 Amount in Words: {amount_words}")
+
                 # Row 19 – skip (auto-filled)
                 elif row == "19":
                     continue
