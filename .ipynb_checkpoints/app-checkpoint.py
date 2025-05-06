@@ -97,7 +97,7 @@ field_structure = load_field_structure()
 all_inputs = {}
 
 for group, fields in field_structure.items():
-    with st.expander(group, expanded=True):
+    with st.expander(group, expanded=False):
         for row, label, _ in fields:
             for proj in range(1, project_count + 1):
                 key = f"{row}_P{proj}"
