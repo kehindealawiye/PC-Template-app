@@ -261,6 +261,8 @@ if filtered_files:
 else:
     st.sidebar.info("No backups found matching your filters.")
 
+contractor = all_inputs.get("7_P1", "Contractor")
+project_name = all_inputs.get("5_P1", "Project Description")
 
 # Option to start a new form
 if st.sidebar.button("Start New Blank Form"):
@@ -269,78 +271,74 @@ if st.sidebar.button("Start New Blank Form"):
         del st.session_state["loaded_filename"]
     st.rerun()
 
-for group, fields in field_structure.items():
-    with st.expander(group, expanded=False):  # 🧩 Each field group in an expandable section
-        for row, label, _ in fields:
-            for proj in range(1, project_count + 1):  # 🔁 Repeat for each project (1–3)
+contractor = all_inputs.get("7_P1", "Contractor")
+project_name = all_inputs.get("5_P1", "Project Description")
 
-                # 🛑 Skip some sections for projects beyond 1
+# === 🧩 FORM ENTRY BLOCK ===
+for group, fields in field_structure.items():
+    with st.expander(group, expanded=False):
+        for row, label, _ in fields:
+            for proj in range(1, project_count + 1):
+
+                # 🛑 Skip sections for proj > 1
                 if group in ["Date of Approval", "Address Line", "Signatories"] and proj > 1:
                     continue
                 if group == "Folio References" and label != "Inspection report File number" and proj > 1:
                     continue
 
-                key = f"{row}_P{proj}"  # 🔑 Base key per field per project
+                key = f"{row}_P{proj}"
                 label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
-
-                # 📝 For shared fields like Address Line 1, don't suffix label
                 if group in ["Date of Approval", "Address Line", "Signatories", "Folio References"] and label != "Inspection report File number":
                     label_suffix = label
 
-                # 🔄 Set default in session_state if not already set
                 if key not in st.session_state:
                     st.session_state[key] = str(all_inputs.get(key, ""))
 
                 default = st.session_state.get(key, "")
-                widget_key = f"{group}_{label}_{proj}_{row}"  # 🛡 Unique widget key to prevent duplication
+                widget_key = f"{group}_{label}_{proj}_{row}"
 
-                # 🏢 Auto-fill "Address line 2" with ministry name (from Row 3)
+                # Address Line 2 autofill
                 if label == "Address line 2":
                     default_ministry = all_inputs.get(f"3_P{proj}", "")
                     st.session_state[key] = str(default_ministry)
                     all_inputs[key] = st.text_input(label_suffix, value=st.session_state[key], key=widget_key)
 
-                # ⬇ Render dropdowns if field has custom dropdown values
+                # Dropdowns
                 elif label in custom_dropdowns:
                     options = custom_dropdowns[label]
                     default_value = all_inputs.get(key, options[0])
-
                     if key not in st.session_state or st.session_state[key] not in options:
                         st.session_state[key] = default_value
-
                     dropdown_value = st.session_state[key]
                     if dropdown_value not in options:
                         dropdown_value = options[0]
                         st.session_state[key] = dropdown_value
-
                     all_inputs[key] = st.selectbox(
-                        label_suffix,
-                        options,
-                        index=options.index(dropdown_value),
-                        key=widget_key
+                        label_suffix, options, index=options.index(dropdown_value), key=widget_key
                     )
 
-                # 🧮 Amount Due calculation (Row 18) and auto-fill Row 19
-                elif row == "18":
-                    amount = calculate_amount_due(st.session_state, proj, show_debug=True)
-                    st.session_state[key] = f"{amount:,.2f}"
-                    amount_words = amount_in_words_naira(amount)
-                    st.session_state[f"19_P{proj}"] = amount_words
-                    st.info(f"Calculated Amount Due: ₦{st.session_state[key]}")
-                    st.write(f"Amount in Words: {amount_words}")
-                    all_inputs[key] = st.session_state[key]
-
-                # 🚫 Skip rendering Row 19 (already handled above)
+                # Row 19 – skip (auto-filled)
                 elif row == "19":
                     continue
 
-                # 🧾 Default: render as text_input
+                # Default text input
                 else:
                     all_inputs[key] = st.text_input(label_suffix, value=default, key=widget_key)
 
+# === 🧮 AMOUNT CALCULATION & DEBUG DISPLAY ===
+for proj in range(1, project_count + 1):
+    try:
+        amount = calculate_amount_due(st.session_state, proj, show_debug=True)
+        st.session_state[f"18_P{proj}"] = f"{amount:,.2f}"
+        amount_words = amount_in_words_naira(amount)
+        st.session_state[f"19_P{proj}"] = amount_words
 
-contractor = all_inputs.get("7_P1", "Contractor")
-project_name = all_inputs.get("5_P1", "Project Description")
+        st.markdown(f"### 💰 Summary for Project {proj}")
+        st.success(f"Calculated Amount Due: ₦{st.session_state[f'18_P{proj}']}")
+        st.caption(f"Amount in Words: {amount_words}")
+    except Exception as e:
+        st.warning(f"Could not calculate amount due for Project {proj}. Error: {e}")
+
 
 if st.button("Save My Work Offline"):
     save_data_locally(dict(st.session_state))
