@@ -138,10 +138,6 @@ for k, v in all_inputs.items():
     if pd.isna(v):
         all_inputs[k] = ""
 
-# Capture VAT inputs early
-for proj in range(1, project_count + 1):
-    vat_key = f"vat_P{proj}"
-    all_inputs[vat_key] = st.text_input(f"VAT % – Project {proj}", value="7.5", key=vat_key)
 
 st.sidebar.subheader("Manage Saved Forms")
 if os.path.exists("backups"):
@@ -313,6 +309,14 @@ for group, fields in field_structure.items():
                     all_inputs[key] = st.selectbox(
                         label_suffix, options, index=options.index(dropdown_value), key=widget_key
                     )
+
+                elif row == "18":
+                    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
+                    all_inputs[key] = f"{amount:,.2f}"
+                    st.info(f"Calculated Amount Due for Project {proj}: ₦{all_inputs[key]}")
+                    amount_words = amount_in_words_naira(amount)
+                    all_inputs[f"19_P{proj}"] = amount_words
+                    st.caption(f"📝 Amount in Words: {amount_words}")
 
                 # Row 19 – skip (auto-filled)
                 elif row == "19":
