@@ -10,7 +10,7 @@ import re
 
 # === Configuration ===
 template_paths = {
-    1: "PC Template-1.xlsx",
+    1: "PC Template.xlsx",
     2: "PC Template 2.xlsx",
     3: "PC Template 3.xlsx"
 }
