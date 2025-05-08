@@ -1,4 +1,14 @@
 
+# === 🧾 Excel Template Preview ===
+st.sidebar.markdown("### Excel Template Preview")
+try:
+    preview_wb = load_template(project_count)
+    st.sidebar.success(f"Template loaded: {template_paths[project_count]}")
+    st.sidebar.caption("You can proceed to fill the form.")
+except Exception as e:
+    st.sidebar.error(f"Failed to load Excel template: {e}")
+
+
 import streamlit as st
 import pandas as pd
 import io
@@ -25,7 +35,7 @@ custom_dropdowns = {
     "Percentage of Advance payment? (as specified in the award letter)": ["0%", "25%", "40%", "50%", "60%", "70%"],
     "Is there 5% retention?": ["0%", "5%"],
     "Vat": ["0%", "7.5%"],
-    "Address line 1": ["The Director", "The Chairman", "The Permanent Secretary", "The Honourable Commissioner", "The Special Adviser"]
+    "Address line 1": ["The Director", "The Chairman", "The Permanent Secretary", "The General Manager" "The Honourable Commissioner", "The Special Adviser"]
 }
 
 # === User Mode and Context ===
@@ -143,6 +153,18 @@ for group, fields in field_structure.items():
                     all_inputs[key] = st.selectbox(label_suffix, custom_dropdowns[label], index=custom_dropdowns[label].index(default) if default in custom_dropdowns[label] else 0)
                 elif row == "19":
                     continue
+
+                # 🧮 Inline Debug Panel (only for Prepayment Certificate Details)
+                if group == "Prepayment Certificate Details" and row == "18":
+                    st.markdown(f"#### Debug Info – Project {proj}")
+                    _amount = calculate_amount_due(st.session_state, proj, show_debug=True)
+                    st.session_state[key] = f"{_amount:,.2f}"
+                    _words = amount_in_words_naira(_amount)
+                    st.session_state[f"19_P{proj}"] = _words
+                    st.success(f"Calculated Amount Due: ₦{st.session_state[key]}")
+                    st.caption(f"In Words: {_words}")
+                    all_inputs[key] = st.session_state[key]
+
                 elif row == "18":
                     amount = calculate_amount_due(all_inputs, proj, show_debug=True)
                     all_inputs[key] = f"{amount:,.2f}"
@@ -150,8 +172,7 @@ for group, fields in field_structure.items():
                     st.info(f"Amount Due: ₦{all_inputs[key]}")
                     st.caption(f"Amount in Words: {all_inputs[f'19_P{proj}']}")
                 else:
-                    unique_key = f"{group}_{label}_{proj}_{row}"
-                    all_inputs[key] = st.text_input(label_suffix, value=default, key=unique_key)
+                    all_inputs[key] = st.text_input(label_suffix, value=default)
 
 # === Save & Download ===
 contractor = all_inputs.get("7_P1", "Contractor")
@@ -209,3 +230,27 @@ if st.sidebar.button("➕ Start New Blank Form"):
         del st.session_state["loaded_filename"]
     st.session_state["restored_inputs"] = {}
     st.rerun()
+
+
+# === 📊 Summary Dashboard ===
+st.markdown("---")
+st.header("📊 Summary of All Projects")
+
+total_due = 0
+summary_data = []
+
+for proj in range(1, project_count + 1):
+    try:
+        val = st.session_state.get(f"18_P{proj}", "0").replace(",", "")
+        amt = float(val)
+        total_due += amt
+        summary_data.append((f"Project {proj}", amt))
+    except:
+        continue
+
+if summary_data:
+    df_summary = pd.DataFrame(summary_data, columns=["Project", "Amount Due"])
+    st.dataframe(df_summary)
+    st.subheader(f"**Total Amount Due: ₦{total_due:,.2f}**")
+else:
+    st.info("No amount data available to summarize.")
