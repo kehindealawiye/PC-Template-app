@@ -1,4 +1,13 @@
 
+import streamlit as st
+import pandas as pd
+import io
+import os
+from datetime import datetime
+from openpyxl import load_workbook
+from num2words import num2words
+import re
+
 # === 🧾 Excel Template Preview ===
 st.sidebar.markdown("### Excel Template Preview")
 try:
@@ -8,15 +17,6 @@ try:
 except Exception as e:
     st.sidebar.error(f"Failed to load Excel template: {e}")
 
-
-import streamlit as st
-import pandas as pd
-import io
-import os
-from datetime import datetime
-from openpyxl import load_workbook
-from num2words import num2words
-import re
 
 # === Configuration ===
 template_paths = {
