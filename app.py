@@ -150,7 +150,8 @@ for group, fields in field_structure.items():
                     st.info(f"Amount Due: ₦{all_inputs[key]}")
                     st.caption(f"Amount in Words: {all_inputs[f'19_P{proj}']}")
                 else:
-                    all_inputs[key] = st.text_input(label_suffix, value=default)
+                    unique_key = f"{group}_{label}_{proj}_{row}"
+                    all_inputs[key] = st.text_input(label_suffix, value=default, key=unique_key)
 
 # === Save & Download ===
 contractor = all_inputs.get("7_P1", "Contractor")
