@@ -1,12 +1,4 @@
-
 import streamlit as st
-import pandas as pd
-import io
-import os
-from datetime import datetime
-from openpyxl import load_workbook
-from num2words import num2words
-import re
 
 # === 🧾 Excel Template Preview ===
 st.sidebar.markdown("### Excel Template Preview")
@@ -17,6 +9,14 @@ try:
 except Exception as e:
     st.sidebar.error(f"Failed to load Excel template: {e}")
 
+
+import pandas as pd
+import io
+import os
+from datetime import datetime
+from openpyxl import load_workbook
+from num2words import num2words
+import re
 
 # === Configuration ===
 template_paths = {
@@ -35,7 +35,7 @@ custom_dropdowns = {
     "Percentage of Advance payment? (as specified in the award letter)": ["0%", "25%", "40%", "50%", "60%", "70%"],
     "Is there 5% retention?": ["0%", "5%"],
     "Vat": ["0%", "7.5%"],
-    "Address line 1": ["The Director", "The Chairman", "The Permanent Secretary", "The General Manager" "The Honourable Commissioner", "The Special Adviser"]
+    "Address line 1": ["The Director", "The Chairman", "The Permanent Secretary", "The General Manager", "The Honourable Commissioner", "The Special Adviser"]
 }
 
 # === User Mode and Context ===
