@@ -8,6 +8,7 @@ st.title("Prepayment Certificate Filler")
 st.sidebar.markdown("### Excel Template Preview")
 
 # 🔁 Ensure this is defined BEFORE using it
+project_count = st.selectbox("Number of Projects", [1, 2, 3])
 def load_template(project_count):
     return load_workbook(template_paths[project_count])
 
@@ -108,7 +109,7 @@ def calculate_amount_due(inputs, proj, show_debug=False):
         st.write(f"VAT: ₦{vat:,.2f}")
         st.write(f"Refund: ₦{advance_refund_amount:,.2f}")
         st.write(f"Previous Payment: ₦{previous_payment:,.2f}")
-        st.success(f"Amount Due: ₦{amount_due:,.2f}")
+        
     return amount_due
 
 def amount_in_words_naira(amount):
@@ -157,6 +158,7 @@ for group, fields in field_structure.items():
                 key = f"{row}_P{proj}"
                 default = all_inputs.get(key, "")
                 widget_key = f"{group}_{label}_{proj}_{row}"
+                all_inputs[key] = st.text_input(label_suffix, value=default, key=widget_key)
 
                 # ✅ Label logic: omit “– Project 1” for single-entry fields
                 if group in ["Date of Approval", "Address Line", "Signatories", "Folio References"] and label != "Inspection report File number":
