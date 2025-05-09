@@ -1,5 +1,13 @@
 import streamlit as st
 
+# === User Mode and Context ===
+st.set_page_config(page_title="Prepayment Certificate App", layout="wide")
+st.title("Prepayment Certificate Filler")
+
+user = st.sidebar.text_input("Enter Your Name (used for saving backups)", value="demo_user")
+is_admin = st.sidebar.checkbox("View All Backups (Admin Only)")
+
+
 # === 🧾 Excel Template Preview ===
 st.sidebar.markdown("### Excel Template Preview")
 try:
@@ -37,13 +45,6 @@ custom_dropdowns = {
     "Vat": ["0%", "7.5%"],
     "Address line 1": ["The Director", "The Chairman", "The Permanent Secretary", "The General Manager", "The Honourable Commissioner", "The Special Adviser"]
 }
-
-# === User Mode and Context ===
-st.set_page_config(page_title="Prepayment Certificate App", layout="wide")
-st.title("Prepayment Certificate Filler")
-
-user = st.sidebar.text_input("Enter Your Name (used for saving backups)", value="demo_user")
-is_admin = st.sidebar.checkbox("View All Backups (Admin Only)")
 
 # === Folder Handling ===
 backup_root = "backups"
