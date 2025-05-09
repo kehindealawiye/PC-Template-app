@@ -10,6 +10,16 @@ st.sidebar.markdown("### Excel Template Preview")
 
 # 🔁 Ensure this is defined BEFORE using it
 project_count = st.selectbox("Number of Projects", [1, 2, 3], key="project_count_select")
+template_paths = {
+    1: "PC Template.xlsx",
+    2: "PC Template 2.xlsx",
+    3: "PC Template 3.xlsx"
+}
+project_columns = {
+    1: {1: "B"},
+    2: {1: "B", 2: "E"},
+    3: {1: "B", 2: "E", 3: "H"}
+}
 
 def load_template(project_count):
     return load_workbook(template_paths[project_count])
@@ -34,16 +44,7 @@ user = st.sidebar.text_input("Enter Your Name (used for saving backups)", value=
 is_admin = st.sidebar.checkbox("View All Backups (Admin Only)")
 
 # === Configuration ===
-template_paths = {
-    1: "PC Template.xlsx",
-    2: "PC Template 2.xlsx",
-    3: "PC Template 3.xlsx"
-}
-project_columns = {
-    1: {1: "B"},
-    2: {1: "B", 2: "E"},
-    3: {1: "B", 2: "E", 3: "H"}
-}
+
 details_sheet = "DETAILS"
 custom_dropdowns = {
     "Payment stage:": ["Stage Payment", "Final Payment", "Retention"],
