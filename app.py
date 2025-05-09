@@ -159,49 +159,43 @@ for group, fields in field_structure.items():
                 key = f"{row}_P{proj}"
                 default = all_inputs.get(key, "")
 
-                # ✅ Label formatting: no "– Project 1" suffix for shared fields
-                if group in ["Date of Approval", "Address Line", "Signatories", "Folio References"] and proj == 1 and label != "Inspection report File number":
+                # ✅ Label formatting: no suffix for shared fields
+                if proj == 1 and group in ["Date of Approval", "Address Line", "Signatories", "Folio References"] and label != "Inspection report File number":
                     label_suffix = label
                 else:
                     label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
 
-                # ✅ Unique widget key to avoid duplicate ID errors
                 widget_key = f"{group}_{label}_{proj}_{row}"
 
-
-                # === Row 18: Handle Amount Due Calculation with Debug Panel
-                if row == "18" and group == "Prepayment Certificate Details":
-                    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
-                    all_inputs[key] = f"{amount:,.2f}"
-                    all_inputs[f"19_P{proj}"] = amount_in_words_naira(amount)
-
-                    st.session_state[key] = all_inputs[key]
-                    st.session_state[f"19_P{proj}"] = all_inputs[f"19_P{proj}"]
-
-                    st.success(f"Calculated Amount Due: ₦{all_inputs[key]}")
-                    st.caption(f"In Words: {all_inputs[f'19_P{proj}']}")
-
-                    # Still show the read-only text input field for visibility
-                    st.text_input(label_suffix, value=all_inputs[key], key=widget_key, disabled=True)
+                # === Row 19: skip — handled automatically
+                if row == "19":
                     continue
 
-                elif row == "19":
-                    continue  # Auto-handled
+                # === Row 18: Calculated Amount Due (with debug + read-only field)
+                elif row == "18" and group == "Prepayment Certificate Details":
+                    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
+                    amount_words = amount_in_words_naira(amount)
 
-                # === Dropdown Fields
+                    all_inputs[key] = f"{amount:,.2f}"
+                    all_inputs[f"19_P{proj}"] = amount_words
+                    st.session_state[key] = all_inputs[key]
+                    st.session_state[f"19_P{proj}"] = amount_words
+
+                    st.success(f"Calculated Amount Due: ₦{all_inputs[key]}")
+                    st.caption(f"In Words: {amount_words}")
+                    st.text_input(label_suffix, value=all_inputs[key], key=widget_key, disabled=True)
+                    continue  # skip to next field
+
+                # === Dropdowns
                 elif label in custom_dropdowns:
                     options = custom_dropdowns[label]
                     default_index = options.index(default) if default in options else 0
-                    all_inputs[key] = st.selectbox(
-                        label_suffix,
-                        options,
-                        index=default_index,
-                        key=widget_key
-                    )
+                    all_inputs[key] = st.selectbox(label_suffix, options, index=default_index, key=widget_key)
 
-                # === All Other Text Inputs
+                # === Text Input
                 else:
                     all_inputs[key] = st.text_input(label_suffix, value=default, key=widget_key)
+
 
 
                 # 🧮 Inline Debug Panel (only for Prepayment Certificate Details)
