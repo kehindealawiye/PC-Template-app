@@ -145,7 +145,6 @@ else:
     all_inputs = {}
 
 # === Form Entry ===
-# === Form Entry ===
 for group, fields in field_structure.items():
     with st.expander(group, expanded=False):
         for row, label, _ in fields:
@@ -159,13 +158,16 @@ for group, fields in field_structure.items():
 
                 key = f"{row}_P{proj}"
                 default = all_inputs.get(key, "")
-                widget_key = f"{group}_{label}_{proj}_{row}"
 
-                # === Label formatting ===
-                if group in ["Date of Approval", "Address Line", "Signatories", "Folio References"] and label != "Inspection report File number":
+                # ✅ Label formatting: no "– Project 1" suffix for shared fields
+                if group in ["Date of Approval", "Address Line", "Signatories", "Folio References"] and proj == 1 and label != "Inspection report File number":
                     label_suffix = label
                 else:
                     label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
+
+                # ✅ Unique widget key to avoid duplicate ID errors
+                widget_key = f"{group}_{label}_{proj}_{row}"
+
 
                 # === Row 18: Handle Amount Due Calculation with Debug Panel
                 if row == "18" and group == "Prepayment Certificate Details":
