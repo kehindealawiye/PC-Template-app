@@ -1,4 +1,5 @@
 import streamlit as st
+from openpyxl import load_workbook
 
 # === User Mode and Context ===
 st.set_page_config(page_title="Prepayment Certificate App", layout="wide")
@@ -24,7 +25,6 @@ except Exception as e:
 import pandas as pd
 import io
 import os
-from openpyxl import load_workbook
 from datetime import datetime
 from num2words import num2words
 import re
@@ -218,8 +218,10 @@ for group, fields in field_structure.items():
                     all_inputs[f"19_P{proj}"] = amount_in_words_naira(amount)
                     st.info(f"Amount Due: ₦{all_inputs[key]}")
                     st.caption(f"Amount in Words: {all_inputs[f'19_P{proj}']}")
-                else:
-                    all_inputs[key] = st.text_input(label_suffix, value=default)
+                else:                    
+                    widget_key = f"{group}_{label}_{proj}_{row}_text"
+                    all_inputs[key] = st.text_input(label_suffix, value=default, key=widget_key)
+
 
 # === Save & Download ===
 contractor = all_inputs.get("7_P1", "Contractor")
