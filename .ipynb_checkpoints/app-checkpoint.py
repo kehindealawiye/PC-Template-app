@@ -4,19 +4,20 @@ import streamlit as st
 st.set_page_config(page_title="Prepayment Certificate App", layout="wide")
 st.title("Prepayment Certificate Filler")
 
-user = st.sidebar.text_input("Enter Your Name (used for saving backups)", value="demo_user")
-is_admin = st.sidebar.checkbox("View All Backups (Admin Only)")
-
-
 # === 🧾 Excel Template Preview ===
 st.sidebar.markdown("### Excel Template Preview")
+
+# 🔁 Ensure this is defined BEFORE using it
+def load_template(project_count):
+    return load_workbook(template_paths[project_count])
+
+# ✅ Try loading the Excel template based on project_count
 try:
     preview_wb = load_template(project_count)
     st.sidebar.success(f"Template loaded: {template_paths[project_count]}")
     st.sidebar.caption("You can proceed to fill the form.")
 except Exception as e:
     st.sidebar.error(f"Failed to load Excel template: {e}")
-
 
 import pandas as pd
 import io
@@ -25,6 +26,10 @@ from datetime import datetime
 from openpyxl import load_workbook
 from num2words import num2words
 import re
+
+# ✅ First Streamlit command
+user = st.sidebar.text_input("Enter Your Name (used for saving backups)", value="demo_user")
+is_admin = st.sidebar.checkbox("View All Backups (Admin Only)")
 
 # === Configuration ===
 template_paths = {
@@ -142,18 +147,37 @@ for group, fields in field_structure.items():
     with st.expander(group, expanded=False):
         for row, label, _ in fields:
             for proj in range(1, project_count + 1):
+
+                # Skip repeated groups for Project 2 & 3
                 if proj > 1 and group in ["Date of Approval", "Address Line", "Signatories"]:
                     continue
                 if proj > 1 and group == "Folio References" and label != "Inspection report File number":
                     continue
 
                 key = f"{row}_P{proj}"
-                label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
                 default = all_inputs.get(key, "")
+                widget_key = f"{group}_{label}_{proj}_{row}"
+
+                # ✅ Label logic: omit “– Project 1” for single-entry fields
+                if group in ["Date of Approval", "Address Line", "Signatories", "Folio References"] and label != "Inspection report File number":
+                    label_suffix = label
+                else:
+                    label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
+
                 if label in custom_dropdowns:
-                    all_inputs[key] = st.selectbox(label_suffix, custom_dropdowns[label], index=custom_dropdowns[label].index(default) if default in custom_dropdowns[label] else 0)
+                    options = custom_dropdowns[label]
+                    default_index = options.index(default) if default in options else 0
+                    all_inputs[key] = st.selectbox(
+                        label_suffix,
+                        options,
+                        index=default_index,
+                        key=widget_key
+                    )
                 elif row == "19":
-                    continue
+                    continue  # skip row 19 (Amount in Words auto-filled)
+                else:
+                    all_inputs[key] = st.text_input(label_suffix, value=default, key=widget_key)
+
 
                 # 🧮 Inline Debug Panel (only for Prepayment Certificate Details)
                 if group == "Prepayment Certificate Details" and row == "18":
