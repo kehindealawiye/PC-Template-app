@@ -8,7 +8,8 @@ st.title("Prepayment Certificate Filler")
 st.sidebar.markdown("### Excel Template Preview")
 
 # 🔁 Ensure this is defined BEFORE using it
-project_count = st.selectbox("Number of Projects", [1, 2, 3])
+project_count = st.selectbox("Number of Projects", [1, 2, 3], key="project_count_select")
+
 def load_template(project_count):
     return load_workbook(template_paths[project_count])
 
@@ -23,8 +24,8 @@ except Exception as e:
 import pandas as pd
 import io
 import os
-from datetime import datetime
 from openpyxl import load_workbook
+from datetime import datetime
 from num2words import num2words
 import re
 
@@ -133,7 +134,6 @@ def save_data_locally(all_inputs, filename=None):
         df.to_csv(os.path.join(user_backup_dir, backup_name), index=False)
 
 # === Start App ===
-project_count = st.selectbox("Number of Projects", [1, 2, 3])
 template_path = template_paths[project_count]
 column_map = project_columns[project_count]
 field_structure = load_field_structure()
@@ -143,6 +143,7 @@ if "restored_inputs" in st.session_state:
 else:
     all_inputs = {}
 
+# === Form Entry ===
 # === Form Entry ===
 for group, fields in field_structure.items():
     with st.expander(group, expanded=False):
@@ -158,15 +159,34 @@ for group, fields in field_structure.items():
                 key = f"{row}_P{proj}"
                 default = all_inputs.get(key, "")
                 widget_key = f"{group}_{label}_{proj}_{row}"
-                all_inputs[key] = st.text_input(label_suffix, value=default, key=widget_key)
 
-                # ✅ Label logic: omit “– Project 1” for single-entry fields
+                # === Label formatting ===
                 if group in ["Date of Approval", "Address Line", "Signatories", "Folio References"] and label != "Inspection report File number":
                     label_suffix = label
                 else:
                     label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
 
-                if label in custom_dropdowns:
+                # === Row 18: Handle Amount Due Calculation with Debug Panel
+                if row == "18" and group == "Prepayment Certificate Details":
+                    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
+                    all_inputs[key] = f"{amount:,.2f}"
+                    all_inputs[f"19_P{proj}"] = amount_in_words_naira(amount)
+
+                    st.session_state[key] = all_inputs[key]
+                    st.session_state[f"19_P{proj}"] = all_inputs[f"19_P{proj}"]
+
+                    st.success(f"Calculated Amount Due: ₦{all_inputs[key]}")
+                    st.caption(f"In Words: {all_inputs[f'19_P{proj}']}")
+
+                    # Still show the read-only text input field for visibility
+                    st.text_input(label_suffix, value=all_inputs[key], key=widget_key, disabled=True)
+                    continue
+
+                elif row == "19":
+                    continue  # Auto-handled
+
+                # === Dropdown Fields
+                elif label in custom_dropdowns:
                     options = custom_dropdowns[label]
                     default_index = options.index(default) if default in options else 0
                     all_inputs[key] = st.selectbox(
@@ -175,8 +195,8 @@ for group, fields in field_structure.items():
                         index=default_index,
                         key=widget_key
                     )
-                elif row == "19":
-                    continue  # skip row 19 (Amount in Words auto-filled)
+
+                # === All Other Text Inputs
                 else:
                     all_inputs[key] = st.text_input(label_suffix, value=default, key=widget_key)
 
