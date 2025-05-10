@@ -132,8 +132,9 @@ def write_to_details(ws, data_dict, column_map):
                     cell.value = value
             else:
                 cell.value = value
-
 def save_data_locally(inputs, filename=None):
+    # Fallback in case someone sends st.session_state directly
+    inputs = dict(inputs)
     df = pd.DataFrame([inputs])
     df.to_csv("saved_form_data.csv", index=False)
     if filename:
@@ -260,10 +261,12 @@ for i, (path, title) in enumerate(filtered_backups):
 
 # Reset form
 if st.sidebar.button("➕ Start New Blank Form"):
-    st.session_state["restored_inputs"] = {}
+    for key in list(st.session_state.keys()):
+        if "_P" in key or key.startswith("autosave_last"):
+            del st.session_state[key]
     if "loaded_filename" in st.session_state:
         del st.session_state["loaded_filename"]
-    st.experimental_rerun()
+    st.rerun()
 
 # === Summary Dashboard ===
 st.markdown("---")
