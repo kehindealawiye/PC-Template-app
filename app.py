@@ -189,8 +189,8 @@ for group, fields in field_structure.items():
                     all_inputs[key] = st.text_input(show_label, value=default, key=widget_key)
 
 # === Save and Download Buttons ===
-contractor = all_inputs.get("7_P1", "Contractor")
-project = all_inputs.get("5_P1", "Project Title")
+contractor = all_inputs.get("5_P1", "Contractor")
+project = all_inputs.get("7_P1", "Project Title")
 filename = st.session_state.get("loaded_filename")
 
 if st.button("💾 Save Offline"):
@@ -220,22 +220,6 @@ for user_dir in all_user_dirs:
             path = os.path.join(user_dir, f)
             title = f"{os.path.basename(user_dir)} | {f.replace('.csv', '').replace('_', ' ')}"
             all_backups.append((path, title))
-
-search_term = st.sidebar.text_input("🔍 Search Backups")
-filtered_backups = [b for b in all_backups if search_term.lower() in b[1].lower()]
-for i, (path, title) in enumerate(filtered_backups):
-    with st.sidebar.expander(title):
-        col1, col2 = st.columns([2, 1])
-        with col1:
-            if st.button("Load", key=f"load_{i}"):
-                data = pd.read_csv(path).to_dict(orient="records")[0]
-                st.session_state["restored_inputs"] = data
-                st.session_state["loaded_filename"] = os.path.basename(path)
-                st.rerun()
-        with col2:
-            if st.button("🗑️", key=f"delete_{i}"):
-                os.remove(path)
-                st.rerun()
 
 if st.sidebar.button("➕ Start New Blank Form"):
     if "loaded_filename" in st.session_state:
