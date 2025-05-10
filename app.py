@@ -209,17 +209,21 @@ if st.button("📥 Download Excel"):
     ws = wb[details_sheet]
     data_to_write = {p: {} for p in range(1, project_count + 1)}
     for key, value in st.session_state.items():
-    if "_P" in key:
-        parts = key.split("_P")
-        if len(parts) == 2 and parts[1].isdigit():
-            row, proj = parts
-            data_to_write[int(proj)][row] = value
-            
+        if "_P" in key:
+            parts = key.split("_P")
+            if len(parts) == 2 and parts[1].isdigit():
+                row, proj = parts
+                data_to_write[int(proj)][row] = value
     write_to_details(ws, data_to_write, column_map)
     buffer = io.BytesIO()
     wb.save(buffer)
     buffer.seek(0)
-    st.download_button("📂 Download Filled Excel", buffer, file_name=f"{project}_by_{contractor}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    st.download_button(
+        "📂 Download Filled Excel",
+        buffer,
+        file_name=f"{project}_by_{contractor}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 # === Backup Listing ===
 st.sidebar.markdown("### 🔄 Manage Saved Backups")
