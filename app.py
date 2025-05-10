@@ -73,6 +73,8 @@ def load_field_structure():
 def load_template(project_count):
     return load_workbook(template_paths[project_count])
 
+from openpyxl.styles import numbers
+
 def write_to_details(ws, data_dict, column_map):
     currency_rows = {"10", "11", "13", "15", "18"}  # rows to format as currency
 
@@ -80,10 +82,18 @@ def write_to_details(ws, data_dict, column_map):
         col = column_map[proj]
         for row_idx, value in entries.items():
             cell = ws[f"{col}{int(row_idx)}"]
-            cell.value = value
 
+            # Try to parse to float if it's a currency row
             if str(row_idx) in currency_rows:
-                cell.number_format = '"₦"#,##0.00'
+                try:
+                    clean_val = str(value).replace("₦", "").replace(",", "").strip()
+                    numeric_val = float(clean_val) if "." in clean_val else int(clean_val)
+                    cell.value = numeric_val
+                    cell.number_format = '"₦"#,##0.00'
+                except:
+                    cell.value = value  # fallback to raw value if conversion fails
+            else:
+                cell.value = value
 
 def calculate_amount_due(inputs, proj, show_debug=False):
     def get(row):
