@@ -74,8 +74,7 @@ def load_template(project_count):
     return load_workbook(template_paths[project_count])
 
 def write_to_details(ws, data_dict, column_map):
-    # Define rows that should be formatted as Naira currency
-    naira_currency_rows = {"10", "11", "13", "15", "18"}
+    currency_rows = {"10", "11", "13", "15", "18"}  # rows to format as currency
 
     for proj, entries in data_dict.items():
         col = column_map[proj]
@@ -83,12 +82,8 @@ def write_to_details(ws, data_dict, column_map):
             cell = ws[f"{col}{int(row_idx)}"]
             cell.value = value
 
-            # Apply Naira currency format if row matches and value is numeric
-            if str(row_idx) in naira_currency_rows:
-                try:
-                    cell.number_format = '#,##0.00 [$₦-0809]'
-                except:
-                    pass
+            if str(row_idx) in currency_rows:
+                cell.number_format = '"₦"#,##0.00'
 
 def calculate_amount_due(inputs, proj, show_debug=False):
     def get(row):
