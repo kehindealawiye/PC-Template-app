@@ -181,10 +181,6 @@ for group, fields in field_structure.items():
                 else:
                     label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
 
-                # ✅ Prefix ₦ for financial fields
-                if row in naira_rows:
-                    label_suffix = f"₦ {label_suffix}"
-
                 widget_key = f"{group}_{label}_{proj}_{row}"
 
                 # === Row 19: skip — handled automatically
