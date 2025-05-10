@@ -147,9 +147,15 @@ def save_data_locally(inputs, filename=None):
 
 # === Restore from Backup or Load Fresh ===
 if "restored_inputs" in st.session_state:
-    all_inputs = st.session_state.pop("restored_inputs")
+    restored = st.session_state.pop("restored_inputs")
+    for k, v in restored.items():
+        if pd.isna(v):
+            v = ""
+        st.session_state[k] = v
+    all_inputs = restored.copy()
 else:
-    all_inputs = {}
+    # If fields already in session_state from auto-save or fresh form
+    all_inputs = {k: v for k, v in st.session_state.items() if "_P" in k}
 
 # === Auto-Save Drafts ===
 if st.session_state.get("autosave_last") != all_inputs:
@@ -194,13 +200,14 @@ project = all_inputs.get("7_P1", "Project Title")
 filename = st.session_state.get("loaded_filename")
 
 if st.button("💾 Save Offline"):
-    save_data_locally(all_inputs, filename)
+    inputs_to_save = {k: v for k, v in st.session_state.items() if "_P" in k}
+    save_data_locally(inputs_to_save, filename)
 
 if st.button("📥 Download Excel"):
     wb = load_template(project_count)
     ws = wb[details_sheet]
     data_to_write = {p: {} for p in range(1, project_count + 1)}
-    for key, value in all_inputs.items():
+    for key, value in st.session_state.items():
         if "_P" in key:
             row, proj = key.split("_P")
             data_to_write[int(proj)][row] = value
