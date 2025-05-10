@@ -157,6 +157,8 @@ else:
     all_inputs = {}
 
 # === Form Entry ===
+naira_rows = {"10", "11", "13", "15", "18"}  # Fields to display ₦ prefix
+
 for group, fields in field_structure.items():
     with st.expander(group, expanded=False):
         for row, label, _ in fields:
@@ -171,11 +173,15 @@ for group, fields in field_structure.items():
                 key = f"{row}_P{proj}"
                 default = all_inputs.get(key, "")
 
-                # ✅ Label formatting: no suffix for shared fields
+                # === Label formatting
                 if proj == 1 and group in ["Date of Approval", "Address Line", "Signatories", "Folio References"] and label != "Inspection report File number":
                     label_suffix = label
                 else:
                     label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
+
+                # ✅ Prefix ₦ for financial fields
+                if row in naira_rows:
+                    label_suffix = f"₦ {label_suffix}"
 
                 widget_key = f"{group}_{label}_{proj}_{row}"
 
@@ -196,7 +202,7 @@ for group, fields in field_structure.items():
                     st.success(f"Calculated Amount Due: ₦{all_inputs[key]}")
                     st.caption(f"In Words: {amount_words}")
                     st.text_input(label_suffix, value=all_inputs[key], key=widget_key, disabled=True)
-                    continue  # skip to next field
+                    continue
 
                 # === Dropdowns
                 elif label in custom_dropdowns:
@@ -204,11 +210,10 @@ for group, fields in field_structure.items():
                     default_index = options.index(default) if default in options else 0
                     all_inputs[key] = st.selectbox(label_suffix, options, index=default_index, key=widget_key)
 
-                # === Text Input
+                # === Text Inputs
                 else:
-                    all_inputs[key] = st.text_input(label_suffix, value=default, key=widget_key)
-
-
+                    placeholder = "₦0.00" if row in naira_rows else ""
+                    all_inputs[key] = st.text_input(label_suffix, value=default, key=widget_key, placeholder=placeholder)
 
                 # 🧮 Inline Debug Panel (only for Prepayment Certificate Details)
                 if group == "Prepayment Certificate Details" and row == "18":
