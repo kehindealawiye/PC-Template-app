@@ -209,9 +209,12 @@ if st.button("📥 Download Excel"):
     ws = wb[details_sheet]
     data_to_write = {p: {} for p in range(1, project_count + 1)}
     for key, value in st.session_state.items():
-        if "_P" in key:
-            row, proj = key.split("_P")
+    if "_P" in key:
+        parts = key.split("_P")
+        if len(parts) == 2 and parts[1].isdigit():
+            row, proj = parts
             data_to_write[int(proj)][row] = value
+            
     write_to_details(ws, data_to_write, column_map)
     buffer = io.BytesIO()
     wb.save(buffer)
