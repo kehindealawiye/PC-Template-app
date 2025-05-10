@@ -212,7 +212,13 @@ if st.button("📥 Download Excel"):
 
 # === Backup Listing ===
 st.sidebar.markdown("### 🔄 Manage Saved Backups")
-all_user_dirs = [user_backup_dir] if not is_admin else [os.path.join(backup_root, u) for u in os.listdir(backup_root) if os.path.isdir(os.path.join(backup_root, u))]
+search_term = st.sidebar.text_input("🔍 Search Backups")
+
+# Show all or per-user backups
+all_user_dirs = [user_backup_dir] if not is_admin else [
+    os.path.join(backup_root, u) for u in os.listdir(backup_root)
+    if os.path.isdir(os.path.join(backup_root, u))
+]
 all_backups = []
 for user_dir in all_user_dirs:
     for f in os.listdir(user_dir):
@@ -221,11 +227,36 @@ for user_dir in all_user_dirs:
             title = f"{os.path.basename(user_dir)} | {f.replace('.csv', '').replace('_', ' ')}"
             all_backups.append((path, title))
 
+# Filter
+filtered_backups = [b for b in all_backups if search_term.lower() in b[1].lower()]
+
+for i, (path, title) in enumerate(filtered_backups):
+    with st.sidebar.expander(title, expanded=False):
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            if st.button("Load", key=f"load_{i}"):
+                try:
+                    df = pd.read_csv(path)
+                    if df.empty:
+                        st.warning("Backup is empty.")
+                    else:
+                        st.session_state["restored_inputs"] = df.to_dict(orient="records")[0]
+                        st.session_state["loaded_filename"] = os.path.basename(path)
+                        st.success("Backup loaded successfully.")
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to load backup: {e}")
+        with col2:
+            if st.button("🗑️", key=f"delete_{i}"):
+                os.remove(path)
+                st.rerun()
+
+# Reset form
 if st.sidebar.button("➕ Start New Blank Form"):
+    st.session_state["restored_inputs"] = {}
     if "loaded_filename" in st.session_state:
         del st.session_state["loaded_filename"]
-    st.session_state["restored_inputs"] = {}
-    st.rerun()
+    st.experimental_rerun()
 
 # === Summary Dashboard ===
 st.markdown("---")
