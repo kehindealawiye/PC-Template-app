@@ -72,10 +72,7 @@ def load_field_structure():
 
 def load_template(project_count):
     return load_workbook(template_paths[project_count])
-
-def write_to_details(ws, data_dict, column_map):
-from openpyxl.styles import numbers
-
+    
 def write_to_details(ws, data_dict, column_map):
     currency_rows = {"10", "11", "13", "15", "18"}  # rows to format as currency
 
