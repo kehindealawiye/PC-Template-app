@@ -201,7 +201,9 @@ for group, fields in field_structure.items():
                     all_inputs[f"19_P{proj}"] = amount_words
                     continue
                 elif row == "19":
-                    continue
+                    value = all_inputs.get(key, "")
+                    st.markdown(f"**{show_label}: {value}**")
+                    continue                    
                 elif label in custom_dropdowns:
                     options = custom_dropdowns[label]
                     if key not in st.session_state:
