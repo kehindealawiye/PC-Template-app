@@ -141,22 +141,24 @@ def write_to_details(ws, data_dict, column_map):
                 cell.value = value
                 
 def save_data_locally(inputs, filename=None):
-    inputs = dict(inputs)  # Make sure it's a dict
+    inputs = dict(inputs)
     df = pd.DataFrame([inputs])
     df.to_csv("saved_form_data.csv", index=False)
 
-    contractor = str(inputs.get("5_P1", "")).strip() or "unspecified_contractor"
-    project = str(inputs.get("7_P1", "")).strip() or "unspecified_project"
-
-    contractor = re.sub(r'[^\w\-]', '_', contractor)
-    project = re.sub(r'[^\w\-]', '_', project)
-
+    # Only name new backups if filename is not provided
     if filename:
         df.to_csv(os.path.join(user_backup_dir, filename), index=False)
     else:
+        contractor = str(inputs.get("7_P1", "")).strip()
+        project = str(inputs.get("5_P1", "")).strip()
+
+        # Use 'unspecified' only if values are truly empty
+        contractor_clean = re.sub(r'[^\w\-]', '_', contractor) if contractor else "unspecified_contractor"
+        project_clean = re.sub(r'[^\w\-]', '_', project) if project else "unspecified_project"
+
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        backup_name = f"{contractor}_{project}_{timestamp}.csv"
-        df.to_csv(os.path.join(user_backup_dir, backup_name), index=False)
+        filename = f"{contractor_clean}_{project_clean}_{timestamp}.csv"
+        df.to_csv(os.path.join(user_backup_dir, filename), index=False)
         
 # === Restore from Backup or Load Fresh ===
 if "restored_inputs" in st.session_state:
