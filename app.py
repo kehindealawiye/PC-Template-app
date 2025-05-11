@@ -172,6 +172,8 @@ if "restored_inputs" in st.session_state:
     for k, v in restored.items():
         if pd.isna(v):
             v = ""
+        else:
+            v = str(v)
         st.session_state[k] = v
     all_inputs = restored.copy()
 else:
