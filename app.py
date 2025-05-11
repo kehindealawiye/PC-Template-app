@@ -125,13 +125,14 @@ def write_to_details(ws, data_dict, column_map):
             cell = ws[f"{col}{int(row_idx)}"]
             if str(row_idx) in currency_rows:
                 try:
-                    val = str(value).replace("₦", "").replace(",", "").strip()
+                    val = str(value).replace("\u20a6", "").replace(",", "").strip()
                     cell.value = float(val) if "." in val else int(val)
-                    cell.number_format = '"₦"#,##0.00'
+                    cell.number_format = '"\u20a6"#,##0.00'
                 except:
                     cell.value = value
             else:
                 cell.value = value
+                
 def save_data_locally(inputs, filename=None):
     # Fallback in case someone sends st.session_state directly
     inputs = dict(inputs)
