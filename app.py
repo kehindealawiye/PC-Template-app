@@ -195,10 +195,10 @@ for group, fields in field_structure.items():
                 if row == "18":
                     amount = calculate_amount_due(all_inputs, proj, show_debug=True)
                     amount_words = amount_in_words_naira(amount)
+                    st.markdown(f"**{show_label}: ₦{amount:,.2f}**")
+                    st.caption(f"In Words: {amount_words}")
                     all_inputs[key] = f"{amount:,.2f}"
                     all_inputs[f"19_P{proj}"] = amount_words
-                    st.text_input(show_label, value=all_inputs[key], key=f"{key}_readonly", disabled=True)
-                    st.caption(f"In Words: {amount_words}")
                     continue
                 elif row == "19":
                     continue
