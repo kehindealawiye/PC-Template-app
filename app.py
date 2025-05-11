@@ -198,7 +198,7 @@ for group, fields in field_structure.items():
                     amount_words = amount_in_words_naira(amount)
                     all_inputs[key] = f"{amount:,.2f}"
                     all_inputs[f"19_P{proj}"] = amount_words
-                    st.text_input(show_label, value=all_inputs[key], key=widget_key, disabled=True)
+                    st.text_input(show_label, value=all_inputs[key], key=key, disabled=True)
                     st.caption(f"In Words: {amount_words}")
                     continue
                 elif row == "19":
@@ -206,9 +206,9 @@ for group, fields in field_structure.items():
                 elif label in custom_dropdowns:
                     options = custom_dropdowns[label]
                     idx = options.index(default) if default in options else 0
-                    all_inputs[key] = st.selectbox(show_label, options, index=idx, key=widget_key)
+                    all_inputs[key] = st.selectbox(show_label, options, index=idx, key=key)
                 else:
-                    all_inputs[key] = st.text_input(show_label, value=default, key=widget_key)
+                    all_inputs[key] = st.text_input(show_label, value=default, key=key)
 
 # === Save and Download Buttons ===
 contractor = str(all_inputs.get("5_P1", "")).strip()
