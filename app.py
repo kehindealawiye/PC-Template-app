@@ -187,7 +187,7 @@ for group, fields in field_structure.items():
                     continue
                 if proj > 1 and group == "Folio References" and label != "Inspection report File number":
                     continue
-
+                    
                 key = f"{row}_P{proj}"
                 default = all_inputs.get(key, "")
                 show_label = label if (proj == 1 or project_count == 1) else f"{label} – Project {proj}"
@@ -195,24 +195,26 @@ for group, fields in field_structure.items():
                 if row == "18":
                     amount = calculate_amount_due(all_inputs, proj, show_debug=True)
                     amount_words = amount_in_words_naira(amount)
+                    all_inputs[key] = f"{amount:,.2f}"
+                    all_inputs[f"19_P{proj}"] = amount_words
+                    st.session_state[f"19_P{proj}"] = amount_words
                     st.markdown(f"**{show_label}: ₦{amount:,.2f}**")
                     st.caption(f"In Words: {amount_words}")
-                    all_inputs[key] = f"{amount:,.2f}"
-                    st.session_state[f"19_P{proj}"] = amount_words
-                    all_inputs[f"19_P{proj}"] = amount_words
                     continue
+
                 elif row == "19":
                     value = all_inputs.get(key, "")
-                    continue                    
+                    continue
+
                 elif label in custom_dropdowns:
                     options = custom_dropdowns[label]
-                    if key not in st.session_state:
+                    if key not in st.session_state or not isinstance(st.session_state[key], str):
                         st.session_state[key] = default if default in options else options[0]
                     all_inputs[key] = st.selectbox(show_label, options, key=key)
+
                 else:
-                    if key not in st.session_state:
-                        st.session_state[key] = default
-                    # Use value pulled directly from session state
+                    if key not in st.session_state or not isinstance(st.session_state[key], str):
+                        st.session_state[key] = default if isinstance(default, str) else ""
                     all_inputs[key] = st.text_input(show_label, key=key)
                     
 # === Save and Download Buttons ===
