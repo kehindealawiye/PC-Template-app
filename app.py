@@ -30,12 +30,13 @@ naira_rows = {"10", "11", "13", "15", "18"}
 def load_template(project_count):
     return load_workbook(template_paths[project_count])
 
-# === User Identity ===
-if "current_user" not in st.session_state:
-    st.session_state["current_user"] = st.sidebar.text_input("Enter Your Name", value="demo_user")
-user = st.session_state["current_user"]
+# === User Identity (Prompt First) ===
+if "current_user" not in st.session_state or not st.session_state["current_user"]:
+    st.session_state["current_user"] = st.text_input("Enter Your Name to Continue:", "")
+    st.stop()  # Prevents form from showing until name is entered
 
 # Admin check based on name
+user = st.session_state["current_user"]
 is_admin = (user.strip().lower() == "kehinde alawiye".lower())
 
 # Backup folder setup
