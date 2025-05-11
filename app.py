@@ -211,19 +211,19 @@ for group, fields in field_structure.items():
                     all_inputs[key] = st.text_input(show_label, value=default, key=widget_key)
 
 # === Save and Download Buttons ===
-contractor = str(all_inputs.get("7_P1", "")).strip()
-project = str(all_inputs.get("5_P1", "")).strip()
+contractor = str(all_inputs.get("5_P1", "")).strip()
+project = str(all_inputs.get("7_P1", "")).strip()
 filename = st.session_state.get("loaded_filename")
 
 if st.button("💾 Save Offline"):
     inputs_to_save = {k: v for k, v in st.session_state.items() if "_P" in k}
 
-    # === DEBUG: check contractor/project before saving ===
+    # Use correct row keys: 5 = Contractor, 7 = Project Description
     debug_contractor = str(inputs_to_save.get("5_P1", "MISSING")).strip()
     debug_project = str(inputs_to_save.get("7_P1", "MISSING")).strip()
     st.warning(f"DEBUG – Contractor: {debug_contractor} | Project: {debug_project}")
 
-    save_data_locally(inputs_to_save, filename)
+    save_data_locally(inputs_to_save)
     st.success("Form saved offline successfully.")
     
 if st.button("📥 Download Excel"):
