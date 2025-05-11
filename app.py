@@ -155,8 +155,8 @@ def save_data_locally(inputs, filename=None):
     if filename:
         df.to_csv(os.path.join(user_backup_dir, filename), index=False)
     else:
-        contractor = str(inputs.get("7_P1", "")).strip()
-        project = str(inputs.get("5_P1", "")).strip()
+        contractor = str(inputs.get("5_P1", "")).strip()
+        project = str(inputs.get("7_P1", "")).strip()
 
         # Use 'unspecified' only if values are truly empty
         contractor_clean = re.sub(r'[^\w\-]', '_', contractor) if contractor else "unspecified_contractor"
@@ -211,8 +211,8 @@ for group, fields in field_structure.items():
                     all_inputs[key] = st.text_input(show_label, value=default, key=widget_key)
 
 # === Save and Download Buttons ===
-contractor = str(all_inputs.get("5_P1", "")).strip()
-project = str(all_inputs.get("7_P1", "")).strip()
+contractor = str(all_inputs.get("7_P1", "")).strip()
+project = str(all_inputs.get("5_P1", "")).strip()
 filename = st.session_state.get("loaded_filename")
 
 if st.button("💾 Save Offline"):
