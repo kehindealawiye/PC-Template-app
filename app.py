@@ -191,25 +191,27 @@ for group, fields in field_structure.items():
                 key = f"{row}_P{proj}"
                 default = all_inputs.get(key, "")
                 show_label = label if (proj == 1 or project_count == 1) else f"{label} – Project {proj}"
-                widget_key = f"{group}_{label}_{proj}_{row}"
 
                 if row == "18":
                     amount = calculate_amount_due(all_inputs, proj, show_debug=True)
                     amount_words = amount_in_words_naira(amount)
                     all_inputs[key] = f"{amount:,.2f}"
                     all_inputs[f"19_P{proj}"] = amount_words
-                    st.text_input(show_label, value=all_inputs[key], key=key, disabled=True)
+                    st.text_input(show_label, key=key, value=all_inputs[key], disabled=True)
                     st.caption(f"In Words: {amount_words}")
                     continue
                 elif row == "19":
                     continue
                 elif label in custom_dropdowns:
                     options = custom_dropdowns[label]
-                    idx = options.index(default) if default in options else 0
-                    all_inputs[key] = st.selectbox(show_label, options, index=idx, key=key)
+                    if key not in st.session_state:
+                        st.session_state[key] = default if default in options else options[0]
+                    all_inputs[key] = st.selectbox(show_label, options, key=key)
                 else:
-                    all_inputs[key] = st.text_input(show_label, value=default, key=key)
-
+                    if key not in st.session_state:
+                        st.session_state[key] = default
+                    all_inputs[key] = st.text_input(show_label, key=key)
+                    
 # === Save and Download Buttons ===
 contractor = str(all_inputs.get("5_P1", "")).strip()
 project = str(all_inputs.get("7_P1", "")).strip()
