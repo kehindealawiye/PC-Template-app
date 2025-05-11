@@ -211,15 +211,21 @@ for group, fields in field_structure.items():
                     all_inputs[key] = st.text_input(show_label, value=default, key=widget_key)
 
 # === Save and Download Buttons ===
-contractor = all_inputs.get("5_P1", "Contractor")
-project = all_inputs.get("7_P1", "Project Title")
+contractor = str(all_inputs.get("5_P1", "")).strip()
+project = str(all_inputs.get("7_P1", "")).strip()
 filename = st.session_state.get("loaded_filename")
 
 if st.button("💾 Save Offline"):
     inputs_to_save = {k: v for k, v in st.session_state.items() if "_P" in k}
+
+    # === DEBUG: check contractor/project before saving ===
+    debug_contractor = str(inputs_to_save.get("5_P1", "MISSING")).strip()
+    debug_project = str(inputs_to_save.get("7_P1", "MISSING")).strip()
+    st.warning(f"DEBUG – Contractor: {debug_contractor} | Project: {debug_project}")
+
     save_data_locally(inputs_to_save, filename)
     st.success("Form saved offline successfully.")
-
+    
 if st.button("📥 Download Excel"):
     wb = load_template(project_count)
     ws = wb[details_sheet]
@@ -284,11 +290,9 @@ for i, (path, title) in enumerate(filtered_backups):
 
 # Reset form
 if st.sidebar.button("➕ Start New Blank Form"):
-    for key in list(st.session_state.keys()):
-        if "_P" in key or key.startswith("autosave_last"):
-            del st.session_state[key]
-    if "loaded_filename" in st.session_state:
-        del st.session_state["loaded_filename"]
+    for k in list(st.session_state.keys()):
+        if "_P" in k or "loaded_filename" in k or "_proj" in k:
+            del st.session_state[k]
     st.rerun()
 
 # === Summary Dashboard ===
