@@ -31,10 +31,16 @@ def load_template(project_count):
     return load_workbook(template_paths[project_count])
 
 # === User Identity ===
-user = st.sidebar.text_input("Enter Your Name (used for saving backups)", value="demo_user")
-is_admin = st.sidebar.checkbox("View All Backups (Admin Only)")
+if "current_user" not in st.session_state:
+    st.session_state["current_user"] = st.sidebar.text_input("Enter Your Name", value="demo_user")
+user = st.session_state["current_user"]
+
+# Admin check based on name
+is_admin = (user.strip().lower() == "kehinde alawiye".lower())
+
+# Backup folder setup
 backup_root = "backups"
-user_backup_dir = os.path.join(backup_root, user)
+user_backup_dir = os.path.join(backup_root, user.replace(" ", "_"))
 os.makedirs(user_backup_dir, exist_ok=True)
 
 # === Excel Template Preview ===
