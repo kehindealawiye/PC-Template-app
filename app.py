@@ -210,7 +210,9 @@ for group, fields in field_structure.items():
                 else:
                     if key not in st.session_state:
                         st.session_state[key] = default
-                    all_inputs[key] = st.text_input(show_label, key=key)
+                    # Use value pulled directly from session state
+                    current_value = st.session_state.get(key, "")
+                    all_inputs[key] = st.text_input(show_label, value=current_value, key=key)
                     
 # === Save and Download Buttons ===
 contractor = str(all_inputs.get("5_P1", "")).strip()
