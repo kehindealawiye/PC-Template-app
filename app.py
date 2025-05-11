@@ -197,7 +197,7 @@ for group, fields in field_structure.items():
                     amount_words = amount_in_words_naira(amount)
                     all_inputs[key] = f"{amount:,.2f}"
                     all_inputs[f"19_P{proj}"] = amount_words
-                    st.text_input(show_label, key=key, value=all_inputs[key], disabled=True)
+                    st.text_input(show_label, value=all_inputs[key], key=f"{key}_readonly", disabled=True)
                     st.caption(f"In Words: {amount_words}")
                     continue
                 elif row == "19":
