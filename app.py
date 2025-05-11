@@ -198,11 +198,11 @@ for group, fields in field_structure.items():
                     st.markdown(f"**{show_label}: ₦{amount:,.2f}**")
                     st.caption(f"In Words: {amount_words}")
                     all_inputs[key] = f"{amount:,.2f}"
+                    st.session_state[f"19_P{proj}"] = amount_words
                     all_inputs[f"19_P{proj}"] = amount_words
                     continue
                 elif row == "19":
                     value = all_inputs.get(key, "")
-                    st.markdown(f"**{show_label}: {value}**")
                     continue                    
                 elif label in custom_dropdowns:
                     options = custom_dropdowns[label]
