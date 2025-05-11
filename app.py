@@ -31,9 +31,15 @@ def load_template(project_count):
     return load_workbook(template_paths[project_count])
 
 # === User Identity (Prompt First) ===
-if "current_user" not in st.session_state or not st.session_state["current_user"]:
-    st.session_state["current_user"] = st.text_input("Enter Your Name to Continue:", "")
-    st.stop()  # Prevents form from showing until name is entered
+if "user_confirmed" not in st.session_state:
+    with st.form("user_form"):
+        name_input = st.text_input("Enter Your Name to Continue:", "")
+        submitted = st.form_submit_button("Enter")
+        if submitted and name_input.strip():
+            st.session_state["current_user"] = name_input.strip()
+            st.session_state["user_confirmed"] = True
+            st.rerun()
+    st.stop()
 
 # Admin check based on name
 user = st.session_state["current_user"]
@@ -172,11 +178,6 @@ else:
     # If fields already in session_state from auto-save or fresh form
     all_inputs = {k: v for k, v in st.session_state.items() if "_P" in k}
 
-# === Auto-Save Drafts ===
-if st.session_state.get("autosave_last") != all_inputs:
-    save_data_locally(all_inputs, filename=st.session_state.get("loaded_filename"))
-    st.session_state["autosave_last"] = all_inputs.copy()
-
 # === Form Entry ===
 for group, fields in field_structure.items():
     with st.expander(group, expanded=False):
@@ -217,6 +218,7 @@ filename = st.session_state.get("loaded_filename")
 if st.button("💾 Save Offline"):
     inputs_to_save = {k: v for k, v in st.session_state.items() if "_P" in k}
     save_data_locally(inputs_to_save, filename)
+    st.success("Form saved offline successfully.")
 
 if st.button("📥 Download Excel"):
     wb = load_template(project_count)
