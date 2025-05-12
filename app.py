@@ -7,6 +7,27 @@ from num2words import num2words
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import json
+import gspread
+
+def get_gsheet_client():
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    creds_dict = st.secrets["gcp_service_account"]
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(dict(creds_dict), scope)
+    return gspread.authorize(creds)
+
+def save_backup_to_gsheet(user, inputs_dict):
+    try:
+        gc = get_gsheet_client()
+        sheet = gc.open("PC_Backups").sheet1  # Change to your actual sheet name if needed
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        for k, v in inputs_dict.items():
+            sheet.append_row([user, timestamp, k, v])
+    except Exception as e:
+        st.error(f"Failed to save to Google Sheet: {e}")
 
 
 # Template paths and project column map
