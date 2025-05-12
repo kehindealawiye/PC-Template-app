@@ -17,20 +17,21 @@ def get_gsheet_client():
             "https://spreadsheets.google.com/feeds",
             "https://www.googleapis.com/auth/drive"
         ]
-        creds_dict = st.secrets["gcp_service_account"]
-        st.write("Loaded keys:", list(creds_dict.keys()))  # Debug: see if keys are present
+        creds_dict = dict(st.secrets["gcp_service_account"])
 
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(dict(creds_dict), scope)
-        st.success("Google credentials loaded successfully")  # Confirm auth worked
+        # FIX: Convert escaped \\n back to actual line breaks in private key
+        if "private_key" in creds_dict:
+            creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
 
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         gc = gspread.authorize(creds)
-        st.success("Google Sheet client connected")
+        st.success("Google Sheet client connected successfully.")
         return gc
 
     except Exception as e:
         st.error(f"Google Sheet auth failed: {e}")
         return None
-        
+
 
 def save_backup_to_gsheet(user, inputs_dict):
     gc = get_gsheet_client()
