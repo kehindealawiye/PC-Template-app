@@ -424,8 +424,8 @@ for proj in range(1, project_count + 1):
         continue
  
     if summary_data:
-    df_summary = pd.DataFrame(summary_data, columns=["Project", "Amount Due"])
-    st.dataframe(df_summary)
-    st.subheader(f"**Total Amount Due: ₦{total_due:,.2f}**")
-else:
-    st.info("No amount data available to summarize.")
+        df_summary = pd.DataFrame(summary_data, columns=["Project", "Amount Due"])
+        st.dataframe(df_summary)
+        st.subheader(f"**Total Amount Due: ₦{total_due:,.2f}**")
+    else:
+        st.info("No amount data available to summarize.")
