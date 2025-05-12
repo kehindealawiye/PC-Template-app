@@ -4,3 +4,5 @@ numpy>=1.24.0
 num2words
 openpyxl
 python-docx
+gspread
+oauth2client
