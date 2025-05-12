@@ -11,6 +11,8 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import json
 
+creds_dict = st.secrets["gcp_service_account"]
+
 def get_gsheet_client():
     scope = [
         "https://spreadsheets.google.com/feeds",
