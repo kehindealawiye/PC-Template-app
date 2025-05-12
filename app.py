@@ -52,7 +52,6 @@ def save_backup_to_gsheet(user, inputs_dict):
 st.set_page_config(page_title="Prepayment Certificate App", layout="wide")
 st.title("Prepayment Certificate Filler")
 
-st.write("Secrets loaded:", st.secrets.get("gcp_service_account", "NOT FOUND"))
 
 # === Template and Project Setup ===
 project_count = st.selectbox("Number of Projects", [1, 2, 3], key="project_count_select")
