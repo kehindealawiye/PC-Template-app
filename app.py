@@ -7,6 +7,30 @@ import os
 from datetime import datetime
 from num2words import num2words
 import re
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+import json
+
+def get_gsheet_client():
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    creds_dict = st.secrets["gcp_service_account"]
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(dict(creds_dict), scope)
+    return gspread.authorize(creds)
+
+def save_backup_to_gsheet(user, inputs_dict):
+    try:
+        gc = get_gsheet_client()
+        sheet = gc.open("PC_Backups").sheet1  # Change to your actual sheet name if needed
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        for k, v in inputs_dict.items():
+            sheet.append_row([user, timestamp, k, v])
+    except Exception as e:
+        st.error(f"Failed to save to Google Sheet: {e}")
+        
 
 # === Page Setup ===
 st.set_page_config(page_title="Prepayment Certificate App", layout="wide")
@@ -226,15 +250,12 @@ filename = st.session_state.get("loaded_filename")
 
 if st.button("💾 Save Offline"):
     inputs_to_save = {k: v for k, v in st.session_state.items() if "_P" in k}
-
-    # Use correct row keys: 5 = Contractor, 7 = Project Description
-    debug_contractor = str(inputs_to_save.get("5_P1", "MISSING")).strip()
-    debug_project = str(inputs_to_save.get("7_P1", "MISSING")).strip()
-    st.warning(f"DEBUG – Contractor: {debug_contractor} | Project: {debug_project}")
-
-    save_data_locally(inputs_to_save)
-    st.success("Form saved offline successfully.")
-    
+if st.button("💾 Save Offline"):
+    inputs_to_save = {k: v for k, v in st.session_state.items() if "_P" in k}
+    save_data_locally(inputs_to_save, filename)  # existing local save
+    save_backup_to_gsheet(st.session_state["current_user"], inputs_to_save)  # new!
+    st.success("Form saved offline and backed up to Google Sheet.")
+     
 if st.button("📥 Download Excel"):
     wb = load_template(project_count)
     ws = wb[details_sheet]
