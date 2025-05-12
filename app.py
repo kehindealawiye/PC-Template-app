@@ -422,42 +422,7 @@ for proj in range(1, project_count + 1):
         summary_data.append((f"Project {proj}", amt))
     except:
         continue
-
-if summary_data:
-    df_summary = pimport streamlit as st
-from openpyxl import load_workbook
-from openpyxl.styles import numbers
-import pandas as pd
-import io
-import os
-from datetime import datetime
-from num2words import num2words
-import re
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-import json
-
-def get_gsheet_client():
-    try:
-        scope = [
-            "https://spreadsheets.google.com/feeds",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        creds_dict = dict(st.secrets["gcp_service_account"])
-
-        # FIX: Convert escaped \\n back to actual line breaks in private key
-        if "private_key" in creds_dict:
-            creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-        gc = gspread.authorize(creds)
-        st.success("Google Sheet client connected successfully.")
-        return gc
-
-    except Exception as e:
-        st.error(f"Google Sheet auth failed: {e}")
-        return None
-        
+ 
 def delete_backup_from_gsheet(user, timestamp):
     try:
         gc = get_gsheet_client()
