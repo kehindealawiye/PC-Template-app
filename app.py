@@ -761,38 +761,7 @@ if st.sidebar.button("➕ Start New Blank Form"):
 
 # === Summary Dashboard ===
 st.markdown("---")import streamlit as st
-from openpyxl import load_workbook
-from openpyxl.styles import numbers
-import pandas as pd
-import io
-import os
-from datetime import datetime
-from num2words import num2words
-import re
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-import json
 
-def get_gsheet_client():
-    try:
-        scope = [
-            "https://spreadsheets.google.com/feeds",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        creds_dict = dict(st.secrets["gcp_service_account"])
-
-        # FIX: Convert escaped \\n back to actual line breaks in private key
-        if "private_key" in creds_dict:
-            creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-        gc = gspread.authorize(creds)
-        st.success("Google Sheet client connected successfully.")
-        return gc
-
-    except Exception as e:
-        st.error(f"Google Sheet auth failed: {e}")
-        return None
         
 def delete_backup_from_gsheet(user, timestamp):
     try:
@@ -967,28 +936,7 @@ def write_to_details(ws, data_dict, column_map):
         col = column_map[proj]
         for row_idx, value in entries.items():
             cell = ws[f"{col}{int(row_idx)}"]
-            if str(row_idx) in currency_rows:
-                try:
-                    val = str(value).replace("\u20a6", "").replace(",", "").strip()
-                    cell.value = float(val) if "." in val else int(val)
-                    cell.number_format = '"\u20a6"#,##0.00'
-                except:
-                    cell.value = value
-            else:
-                cell.value = value
-                
-def save_data_locally(inputs, filename=None):
-    inputs = dict(inputs)
-    df = pd.DataFrame([inputs])
-    df.to_csv("saved_form_data.csv", index=False)
-
-    # Only name new backups if filename is not provided
-    if filename:
-        df.to_csv(os.path.join(user_backup_dir, filename), index=False)
-    else:
-        contractor = str(inputs.get("5_P1", "")).strip()
-        project = str(inputs.get("7_P1", "")).strip()
-
+           
         # Use 'unspecified' only if values are truly empty
         contractor_clean = re.sub(r'[^\w\-]', '_', contractor) if contractor else "unspecified_contractor"
         project_clean = re.sub(r'[^\w\-]', '_', project) if project else "unspecified_project"
