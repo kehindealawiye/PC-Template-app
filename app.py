@@ -250,8 +250,6 @@ filename = st.session_state.get("loaded_filename")
 
 if st.button("💾 Save Offline"):
     inputs_to_save = {k: v for k, v in st.session_state.items() if "_P" in k}
-if st.button("💾 Save Offline"):
-    inputs_to_save = {k: v for k, v in st.session_state.items() if "_P" in k}
     save_data_locally(inputs_to_save, filename)  # existing local save
     save_backup_to_gsheet(st.session_state["current_user"], inputs_to_save)  # new!
     st.success("Form saved offline and backed up to Google Sheet.")
