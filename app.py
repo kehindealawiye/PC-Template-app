@@ -4,6 +4,10 @@ import pandas as pd
 import io
 from openpyxl import load_workbook
 from num2words import num2words
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+import json
+
 
 # Template paths and project column map
 template_paths = {
