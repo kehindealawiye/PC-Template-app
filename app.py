@@ -321,7 +321,7 @@ if st.button("📥 Download Excel"):
     )
 
 # === Backup Listing ===
-st.sidebar.markdown("### 🔄 Manage Saved Backups")
+st.sidebar.markdown("### 🔄 Manage Local Saved Backups - Temporary")
 search_term = st.sidebar.text_input("🔍 Search Backups")
 
 # Show all or per-user backups
@@ -367,6 +367,47 @@ if st.sidebar.button("➕ Start New Blank Form"):
         if "_P" in k or "loaded_filename" in k or "_proj" in k:
             del st.session_state[k]
     st.rerun()
+
+# === Restore from Google Sheets Backup ===
+st.sidebar.markdown("### 🗃️ Restore from Google Sheet Backup")
+
+try:
+    gc = get_gsheet_client()
+    if gc:
+        sheet = gc.open("PC_Backups").sheet1
+        rows = sheet.get_all_records()
+        df_backups = pd.DataFrame(rows)
+
+        current_user = st.session_state.get("current_user", "").strip()
+        user_backups = df_backups[df_backups["user"].str.lower() == current_user.lower()]
+
+        if user_backups.empty:
+            st.sidebar.info("No backups found for your name.")
+        else:
+            timestamps = user_backups["timestamp"].unique().tolist()
+            selected_timestamp = st.sidebar.selectbox("Select a Backup Time", timestamps)
+
+            col1, col2 = st.sidebar.columns(2)
+
+            with col1:
+                if st.button("🔄 Load Backup"):
+                    selected_rows = user_backups[user_backups["timestamp"] == selected_timestamp]
+                    backup_dict = {row["field_key"]: row["value"] for _, row in selected_rows.iterrows()}
+                    st.session_state["restored_inputs"] = backup_dict
+                    st.session_state["loaded_filename"] = f"restored_from_sheet_{selected_timestamp.replace(' ', '_')}.csv"
+                    st.sidebar.success("Backup loaded successfully from Google Sheet.")
+                    st.rerun()
+
+            with col2:
+                if st.button("🗑️ Delete Backup"):
+                    success = delete_backup_from_gsheet(current_user, selected_timestamp)
+                    if success:
+                        st.sidebar.success("Backup deleted successfully.")
+                        st.rerun()
+
+except Exception as e:
+    st.sidebar.error(f"Google Sheet restore failed: {e}")
+    
 
 # === Summary Dashboard ===
 st.markdown("---")
