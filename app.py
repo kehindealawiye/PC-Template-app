@@ -319,6 +319,16 @@ if st.button("📥 Download Excel"):
         file_name=f"{project}_by_{contractor}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+    
+# === Autosave to Google Sheet if form changes ===
+current_inputs = {k: v for k, v in st.session_state.items() if "_P" in k}
+
+# Detect changes since last autosave
+if st.session_state.get("last_autosaved") != current_inputs:
+    with st.spinner("Autosaving..."):
+        save_backup_to_gsheet(st.session_state["current_user"], current_inputs)
+        st.session_state["last_autosaved"] = current_inputs.copy()
+        st.toast("Autosaved to Google Sheet ✅")
 
 # === Backup Listing ===
 st.sidebar.markdown("### 🔄 Manage Local Saved Backups - Temporary")
