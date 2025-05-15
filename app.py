@@ -259,7 +259,7 @@ for group, fields in field_structure.items():
                     continue
                 if proj > 1 and group == "Folio References" and label != "Inspection report File number":
                     continue
-                    
+
                 key = f"{row}_P{proj}"
                 default = all_inputs.get(key, "")
                 show_label = label if (proj == 1 or project_count == 1) else f"{label} – Project {proj}"
@@ -280,8 +280,15 @@ for group, fields in field_structure.items():
 
                 elif label in custom_dropdowns:
                     options = custom_dropdowns[label]
-                    if key not in st.session_state or not isinstance(st.session_state[key], str):
-                        st.session_state[key] = default if default in options else options[0]
+
+                    # Normalize legacy value for renamed field
+                    if label == "Physical Stage of Work" and st.session_state.get(key) == "Complete":
+                        st.session_state[key] = "Completed"
+
+                    # Fallback for missing/invalid session state
+                    if key not in st.session_state or st.session_state[key] not in options:
+                        st.session_state[key] = options[0]
+
                     all_inputs[key] = st.selectbox(show_label, options, key=key)
 
                 else:
@@ -289,6 +296,7 @@ for group, fields in field_structure.items():
                         st.session_state[key] = default if isinstance(default, str) else ""
                     all_inputs[key] = st.text_input(show_label, key=key)
                     
+
 # === Save and Download Buttons ===
 contractor = str(all_inputs.get("5_P1", "")).strip()
 project = str(all_inputs.get("7_P1", "")).strip()
