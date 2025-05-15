@@ -250,7 +250,7 @@ else:
     # If fields already in session_state from auto-save or fresh form
     all_inputs = {k: v for k, v in st.session_state.items() if "_P" in k}
 
-# === Form Entry ===
+# === Form Entry === 
 for group, fields in field_structure.items():
     with st.expander(group, expanded=False):
         for row, label, _ in fields:
