@@ -237,18 +237,14 @@ def save_data_locally(inputs, filename=None):
         df.to_csv(os.path.join(user_backup_dir, filename), index=False)
         
 # === Restore from Backup or Load Fresh ===
+# Apply any restored values directly into session_state
 if "restored_inputs" in st.session_state:
     restored = st.session_state.pop("restored_inputs")
     for k, v in restored.items():
-        if pd.isna(v):
-            v = ""
-        else:
-            v = str(v)
-        st.session_state[k] = v
-    all_inputs = restored.copy()
-else:
-    # If fields already in session_state from auto-save or fresh form
-    all_inputs = {k: v for k, v in st.session_state.items() if "_P" in k}
+        st.session_state[k] = "" if pd.isna(v) else str(v)
+
+# Build all_inputs from what's currently in session_state
+all_inputs = {k: v for k, v in st.session_state.items() if "_P" in k}
 
 # === Form Entry === 
 for group, fields in field_structure.items():
