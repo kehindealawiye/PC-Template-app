@@ -129,7 +129,7 @@ except Exception as e:
 
 # === Dropdown Options ===
 custom_dropdowns = {
-    "Payment stage:": ["Stage Payment", "Final Payment", "Retention"],
+    "Payment stage:": ["Stage Payment", "Final Payment", "Retention Payment"],
     "Percentage of Advance payment? (as specified in the award letter)": ["0%", "25%", "40%", "50%", "60%", "70%"],
     "Is there 5% retention?": ["0%", "5%"],
     "Vat": ["0%", "7.5%"],
