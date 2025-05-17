@@ -299,11 +299,11 @@ contractor = str(all_inputs.get("5_P1", "")).strip()
 project = str(all_inputs.get("7_P1", "")).strip()
 filename = st.session_state.get("loaded_filename")
 
-if st.button("💾 Save Offline"):
-    inputs_to_save = {k: v for k, v in st.session_state.items() if "_P" in k}
-    save_data_locally(inputs_to_save, filename)  # existing local save
-    save_snapshot_to_gsheet(st.session_state["current_user"], inputs_to_save)  # new
-    st.success("Form saved offline and backed up to Google Sheet.")
+ if st.button("📌 Manually Save Snapshot"):
+    current_inputs = {k: v for k, v in st.session_state.items() if "_P" in k}
+    save_snapshot_to_gsheet(st.session_state["current_user"], current_inputs)
+    st.success("Snapshot manually saved to Google Sheet.")
+     
 
 if st.button("📥 Download Excel"):
     wb = load_template(project_count)
