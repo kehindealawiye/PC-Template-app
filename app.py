@@ -319,7 +319,7 @@ current_inputs = {k: v for k, v in st.session_state.items() if "_P" in k}
 # Detect changes since last autosave
 if st.session_state.get("last_autosaved") != current_inputs:
     with st.spinner("Autosaving..."):
-        save_snapshot_to_gsheet(st.session_state["current_user"], inputs_to_save)  # new
+        save_snapshot_to_gsheet(st.session_state["current_user"], current_inputs)  # new
         st.session_state["last_autosaved"] = current_inputs.copy()
         st.toast("Autosaved to Google Sheet ✅")
 
@@ -379,6 +379,9 @@ try:
     if gc:
         sheet = gc.open("PC_Snapshots").sheet1
         df = pd.DataFrame(sheet.get_all_records())
+
+        # Debug: Show the actual column names in the sidebar
+        st.sidebar.write("Snapshot Sheet Columns:", df.columns.tolist())
 
         current_user = st.session_state.get("current_user", "").strip()
         user_snapshots = df[df["user"].str.lower() == current_user.lower()]
