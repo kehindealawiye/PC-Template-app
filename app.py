@@ -380,9 +380,6 @@ try:
         sheet = gc.open("PC_Snapshots").sheet1
         df = pd.DataFrame(sheet.get_all_records())
 
-        # Debug: Show the actual column names in the sidebar
-        st.sidebar.write("Snapshot Sheet Columns:", df.columns.tolist())
-
         current_user = st.session_state.get("current_user", "").strip()
         user_snapshots = df[df["user"].str.lower() == current_user.lower()]
 
