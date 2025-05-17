@@ -299,11 +299,12 @@ contractor = str(all_inputs.get("5_P1", "")).strip()
 project = str(all_inputs.get("7_P1", "")).strip()
 filename = st.session_state.get("loaded_filename")
 
- if st.button("📌 Manually Save Snapshot"):
-    current_inputs = {k: v for k, v in st.session_state.items() if "_P" in k}
-    save_snapshot_to_gsheet(st.session_state["current_user"], current_inputs)
-    st.success("Snapshot manually saved to Google Sheet.")
-     
+# === Save Snapshot to Google Sheet and Local ===
+if st.button("💾 Save Offline"):
+    inputs_to_save = {k: v for k, v in st.session_state.items() if "_P" in k}
+    save_data_locally(inputs_to_save, filename)  # Save as CSV locally
+    save_snapshot_to_gsheet(st.session_state["current_user"], inputs_to_save)  # Save full snapshot to Google Sheet
+    st.success("Form saved locally and backed up to Google Sheet.")
 
 if st.button("📥 Download Excel"):
     wb = load_template(project_count)
@@ -399,8 +400,8 @@ try:
         if user_snapshots.empty:
             st.sidebar.info("No snapshots found for your name.")
         else:
-            timestamps = user_snapshots["timestamp"].unique().tolist()
-            selected_timestamp = st.sidebar.selectbox("Select a Snapshot", timestamps)
+             timestamps = sorted(user_snapshots["timestamp"].unique().tolist(), reverse=True)
+             selected_timestamp = st.sidebar.selectbox("Select a Snapshot", timestamps)
 
             col1, col2, col3 = st.sidebar.columns(3)
 
