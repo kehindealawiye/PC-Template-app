@@ -5,6 +5,7 @@ import pandas as pd
 import io
 import os
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from num2words import num2words
 import re
 import gspread
@@ -60,7 +61,7 @@ def save_snapshot_to_gsheet(user, inputs_dict):
 
     try:
         sheet = gc.open("PC_Snapshots").sheet1  # Ensure this sheet exists with columns: user, timestamp, json_data
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = datetime.now(ZoneInfo("Africa/Lagos")).strftime("%Y-%m-%d %H:%M:%S")
         json_data = json.dumps(inputs_dict)
         sheet.append_row([user, timestamp, json_data])
         st.success("Full snapshot saved to Google Sheet.")
@@ -224,7 +225,7 @@ def save_data_locally(inputs, filename=None):
         contractor_clean = re.sub(r'[^\w\-]', '_', contractor) if contractor else "unspecified_contractor"
         project_clean = re.sub(r'[^\w\-]', '_', project) if project else "unspecified_project"
 
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        timestamp = datetime.now(ZoneInfo("Africa/Lagos")).strftime("%Y-%m-%d %H:%M:%S")
         filename = f"{contractor_clean}_{project_clean}_{timestamp}.csv"
         df.to_csv(os.path.join(user_backup_dir, filename), index=False)
 
@@ -235,7 +236,7 @@ def sync_snapshot_to_local(user, snapshot_dict):
     contractor_clean = re.sub(r"[^\w\-]", "_", contractor) if contractor else "unspecified_contractor"
     project_clean = re.sub(r"[^\w\-]", "_", project) if project else "unspecified_project"
 
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    timestamp = datetime.now(ZoneInfo("Africa/Lagos")).strftime("%Y-%m-%d %H:%M:%S")
     filename = f"{contractor_clean}_{project_clean}_{timestamp}_synced.csv"
     df = pd.DataFrame([snapshot_dict])
     df.to_csv(os.path.join(user_backup_dir, filename), index=False)
@@ -316,6 +317,7 @@ if st.button("📥 Download Excel"):
             if len(parts) == 2 and parts[1].isdigit():
                 row, proj = parts
                 data_to_write[int(proj)][row] = value
+                
     write_to_details(ws, data_to_write, column_map)
     buffer = io.BytesIO()
     wb.save(buffer)
@@ -433,7 +435,7 @@ except Exception as e:
 
 # === Summary Dashboard ===
 st.markdown("---")
-st.header("📊 Summary of All Projects")
+st.header("📊 Summary of all Projects")
 total_due = 0
 summary_data = []
 for proj in range(1, project_count + 1):
