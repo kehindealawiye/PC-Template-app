@@ -32,49 +32,41 @@ def get_gsheet_client():
         st.error(f"Google Sheet auth failed: {e}")
         return None
 
-def delete_backup_from_gsheet(user, timestamp):
+def delete_snapshot_from_gsheet(user, timestamp):
     try:
         gc = get_gsheet_client()
-        sheet = gc.open("PC_Backups").sheet1
-        rows = sheet.get_all_records()
+        sheet = gc.open("PC_Snapshots").sheet1
+        all_values = sheet.get_all_values()
+        headers = all_values[0]
+        data = all_values[1:]
 
-        # Keep only rows not matching the selected timestamp and user
-        filtered_rows = [
-            [row["user"], row["timestamp"], row["field_key"], row["value"]]
-            for row in rows
-            if not (row["user"].strip().lower() == user.strip().lower() and row["timestamp"] == timestamp)
-        ]
+        new_data = [row for row in data if not (row[0].strip().lower() == user.strip().lower() and row[1] == timestamp)]
 
-        # Clear the entire sheet first (remove all rows)
         sheet.clear()
-
-        # Re-insert the headers
-        sheet.append_row(["user", "timestamp", "field_key", "value"])
-
-        # Re-insert filtered rows
-        for row in filtered_rows:
+        sheet.append_row(headers)
+        for row in new_data:
             sheet.append_row(row)
 
         return True
     except Exception as e:
-        st.sidebar.error(f"Failed to delete backup: {e}")
+        st.sidebar.error(f"Failed to delete snapshot: {e}")
         return False
+        
 
-
-def save_backup_to_gsheet(user, inputs_dict):
+def save_snapshot_to_gsheet(user, inputs_dict):
     gc = get_gsheet_client()
     if not gc:
-        return  # If auth failed, skip saving
+        return
 
     try:
-        sheet = gc.open("PC_Backups").sheet1
+        sheet = gc.open("PC_Snapshots").sheet1  # Ensure this sheet exists with columns: user, timestamp, json_data
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        for k, v in inputs_dict.items():
-            sheet.append_row([user, timestamp, k, v])
-        st.success("Backup written to Google Sheet.")
+        json_data = json.dumps(inputs_dict)
+        sheet.append_row([user, timestamp, json_data])
+        st.success("Full snapshot saved to Google Sheet.")
     except Exception as e:
-        st.error(f"Failed to write to Google Sheet: {e}")
-
+        st.error(f"Failed to save snapshot: {e}")
+        
 
 # === Page Setup ===
 st.set_page_config(page_title="Prepayment Certificate App", layout="wide")
@@ -297,7 +289,7 @@ filename = st.session_state.get("loaded_filename")
 if st.button("💾 Save Offline"):
     inputs_to_save = {k: v for k, v in st.session_state.items() if "_P" in k}
     save_data_locally(inputs_to_save, filename)  # existing local save
-    save_backup_to_gsheet(st.session_state["current_user"], inputs_to_save)  # new!
+    save_snapshot_to_gsheet(st.session_state["current_user"], inputs_to_save)  # new
     st.success("Form saved offline and backed up to Google Sheet.")
 
 if st.button("📥 Download Excel"):
@@ -327,7 +319,7 @@ current_inputs = {k: v for k, v in st.session_state.items() if "_P" in k}
 # Detect changes since last autosave
 if st.session_state.get("last_autosaved") != current_inputs:
     with st.spinner("Autosaving..."):
-        save_backup_to_gsheet(st.session_state["current_user"], current_inputs)
+        save_snapshot_to_gsheet(st.session_state["current_user"], inputs_to_save)  # new
         st.session_state["last_autosaved"] = current_inputs.copy()
         st.toast("Autosaved to Google Sheet ✅")
 
@@ -379,46 +371,44 @@ if st.sidebar.button("➕ Start New Blank Form"):
             del st.session_state[k]
     st.rerun()
 
-# === Restore from Google Sheets Backup ===
-st.sidebar.markdown("### 🗃️ Restore from Google Sheet Backup")
+# === Restore from Google Sheet Snapshots ===
+st.sidebar.markdown("### 🗃️ Restore from Google Sheet Snapshots")
 
 try:
     gc = get_gsheet_client()
     if gc:
-        sheet = gc.open("PC_Backups").sheet1
-        rows = sheet.get_all_records()
-        df_backups = pd.DataFrame(rows)
+        sheet = gc.open("PC_Snapshots").sheet1
+        df = pd.DataFrame(sheet.get_all_records())
 
         current_user = st.session_state.get("current_user", "").strip()
-        user_backups = df_backups[df_backups["user"].str.lower() == current_user.lower()]
+        user_snapshots = df[df["user"].str.lower() == current_user.lower()]
 
-        if user_backups.empty:
-            st.sidebar.info("No backups found for your name.")
+        if user_snapshots.empty:
+            st.sidebar.info("No snapshots found for your name.")
         else:
-            timestamps = user_backups["timestamp"].unique().tolist()
-            selected_timestamp = st.sidebar.selectbox("Select a Backup Time", timestamps)
+            timestamps = user_snapshots["timestamp"].unique().tolist()
+            selected_timestamp = st.sidebar.selectbox("Select a Snapshot", timestamps)
 
             col1, col2 = st.sidebar.columns(2)
 
             with col1:
-                if st.button("🔄 Load Backup"):
-                    selected_rows = user_backups[user_backups["timestamp"] == selected_timestamp]
-                    backup_dict = {row["field_key"]: row["value"] for _, row in selected_rows.iterrows()}
-                    st.session_state["restored_inputs"] = backup_dict
-                    st.session_state["loaded_filename"] = f"restored_from_sheet_{selected_timestamp.replace(' ', '_')}.csv"
-                    st.sidebar.success("Backup loaded successfully from Google Sheet.")
+                if st.button("🔄 Load Snapshot"):
+                    row = user_snapshots[user_snapshots["timestamp"] == selected_timestamp].iloc[0]
+                    restored_data = json.loads(row["json_data"])
+                    st.session_state["restored_inputs"] = restored_data
+                    st.session_state["loaded_filename"] = f"restored_from_snapshot_{selected_timestamp.replace(' ', '_')}.csv"
+                    st.sidebar.success("Snapshot loaded from Google Sheet.")
                     st.rerun()
 
             with col2:
-                if st.button("🗑️ Delete Backup"):
-                    success = delete_backup_from_gsheet(current_user, selected_timestamp)
-                    if success:
-                        st.sidebar.success("Backup deleted successfully.")
+                if st.button("🗑️ Delete Snapshot"):
+                    if delete_snapshot_from_gsheet(current_user, selected_timestamp):
+                        st.sidebar.success("Snapshot deleted successfully.")
                         st.rerun()
 
 except Exception as e:
-    st.sidebar.error(f"Google Sheet restore failed: {e}")
-
+    st.sidebar.error(f"Snapshot restore failed: {e}")
+    
 
 # === Summary Dashboard ===
 st.markdown("---")
