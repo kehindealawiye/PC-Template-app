@@ -228,6 +228,19 @@ def save_data_locally(inputs, filename=None):
         filename = f"{contractor_clean}_{project_clean}_{timestamp}.csv"
         df.to_csv(os.path.join(user_backup_dir, filename), index=False)
 
+def sync_snapshot_to_local(user, snapshot_dict):
+    contractor = str(snapshot_dict.get("5_P1", "")).strip()
+    project = str(snapshot_dict.get("7_P1", "")).strip()
+
+    contractor_clean = re.sub(r"[^\w\-]", "_", contractor) if contractor else "unspecified_contractor"
+    project_clean = re.sub(r"[^\w\-]", "_", project) if project else "unspecified_project"
+
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"{contractor_clean}_{project_clean}_{timestamp}_synced.csv"
+    df = pd.DataFrame([snapshot_dict])
+    df.to_csv(os.path.join(user_backup_dir, filename), index=False)
+    
+
 # === Restore from Backup or Load Fresh ===
 if "restored_inputs" in st.session_state:
     restored = st.session_state.pop("restored_inputs")
@@ -389,7 +402,7 @@ try:
             timestamps = user_snapshots["timestamp"].unique().tolist()
             selected_timestamp = st.sidebar.selectbox("Select a Snapshot", timestamps)
 
-            col1, col2 = st.sidebar.columns(2)
+            col1, col2, col3 = st.sidebar.columns(3)
 
             with col1:
                 if st.button("🔄 Load Snapshot"):
@@ -405,6 +418,13 @@ try:
                     if delete_snapshot_from_gsheet(current_user, selected_timestamp):
                         st.sidebar.success("Snapshot deleted successfully.")
                         st.rerun()
+
+            with col3:
+                if st.button("💾 Save to Local"):
+                    row = user_snapshots[user_snapshots["timestamp"] == selected_timestamp].iloc[0]
+                    restored_data = json.loads(row["json_data"])
+                    sync_snapshot_to_local(current_user, restored_data)
+                    st.sidebar.success("Snapshot saved as local backup.")
 
 except Exception as e:
     st.sidebar.error(f"Snapshot restore failed: {e}")
