@@ -400,8 +400,8 @@ try:
         if user_snapshots.empty:
             st.sidebar.info("No snapshots found for your name.")
         else:
-             timestamps = sorted(user_snapshots["timestamp"].unique().tolist(), reverse=True)
-             selected_timestamp = st.sidebar.selectbox("Select a Snapshot", timestamps)
+            timestamps = sorted(user_snapshots["timestamp"].unique().tolist(), reverse=True)
+            selected_timestamp = st.sidebar.selectbox("Select a Snapshot", timestamps)
 
             col1, col2, col3 = st.sidebar.columns(3)
 
