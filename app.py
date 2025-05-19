@@ -1,14 +1,80 @@
 import streamlit as st
 from openpyxl import load_workbook
+from openpyxl.styles import numbers
+import pandas as pd
+import io
+import os
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from num2words import num2words
+import re
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+import json
 
-# === User Mode and Context ===
+def get_gsheet_client():
+    try:
+        scope = [
+            "https://spreadsheets.google.com/feeds",
+            "https://www.googleapis.com/auth/drive"
+        ]
+        creds_dict = dict(st.secrets["gcp_service_account"])
+
+        # FIX: Convert escaped \\n back to actual line breaks in private key
+        if "private_key" in creds_dict:
+            creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        gc = gspread.authorize(creds)
+        st.success("Google Sheet client connected successfully.")
+        return gc
+
+    except Exception as e:
+        st.error(f"Google Sheet auth failed: {e}")
+        return None
+
+def delete_snapshot_from_gsheet(user, timestamp):
+    try:
+        gc = get_gsheet_client()
+        sheet = gc.open("PC_Snapshots").sheet1
+        all_values = sheet.get_all_values()
+        headers = all_values[0]
+        data = all_values[1:]
+
+        new_data = [row for row in data if not (row[0].strip().lower() == user.strip().lower() and row[1] == timestamp)]
+
+        sheet.clear()
+        sheet.append_row(headers)
+        for row in new_data:
+            sheet.append_row(row)
+
+        return True
+    except Exception as e:
+        st.sidebar.error(f"Failed to delete snapshot: {e}")
+        return False
+        
+
+def save_snapshot_to_gsheet(user, inputs_dict):
+    gc = get_gsheet_client()
+    if not gc:
+        return
+
+    try:
+        sheet = gc.open("PC_Snapshots").sheet1  # Ensure this sheet exists with columns: user, timestamp, json_data
+        timestamp = datetime.now(ZoneInfo("Africa/Lagos")).strftime("%Y-%m-%d %H:%M:%S")
+        json_data = json.dumps(inputs_dict)
+        sheet.append_row([user, timestamp, json_data])
+        st.success("Full snapshot saved to Google Sheet.")
+    except Exception as e:
+        st.error(f"Failed to save snapshot: {e}")
+        
+
+# === Page Setup ===
 st.set_page_config(page_title="Prepayment Certificate App", layout="wide")
 st.title("Prepayment Certificate Filler")
 
-# === 🧾 Excel Template Preview ===
-st.sidebar.markdown("### Excel Template Preview")
 
-# 🔁 Ensure this is defined BEFORE using it
+# === Template and Project Setup ===
 project_count = st.selectbox("Number of Projects", [1, 2, 3], key="project_count_select")
 template_paths = {
     1: "PC Template.xlsx",
@@ -20,46 +86,52 @@ project_columns = {
     2: {1: "B", 2: "E"},
     3: {1: "B", 2: "E", 3: "H"}
 }
+details_sheet = "DETAILS"
+naira_rows = {"10", "11", "13", "15", "18"}
 
 def load_template(project_count):
     return load_workbook(template_paths[project_count])
 
-# ✅ Try loading the Excel template based on project_count
+# === User Identity (Prompt First) ===
+if "user_confirmed" not in st.session_state:
+    with st.form("user_form"):
+        name_input = st.text_input("Enter Your Name to Continue:", "")
+        submitted = st.form_submit_button("Enter")
+        if submitted and name_input.strip():
+            st.session_state["current_user"] = name_input.strip()
+            st.session_state["user_confirmed"] = True
+            st.rerun()
+    st.stop()
+
+# Admin check based on name
+user = st.session_state["current_user"]
+is_admin = (user.strip().lower() == "kehinde alawiye".lower())
+
+# Backup folder setup
+backup_root = "backups"
+user_backup_dir = os.path.join(backup_root, user.replace(" ", "_"))
+os.makedirs(user_backup_dir, exist_ok=True)
+
+# === Excel Template Preview ===
+st.sidebar.markdown("### Excel Template Preview")
 try:
     preview_wb = load_template(project_count)
     st.sidebar.success(f"Template loaded: {template_paths[project_count]}")
-    st.sidebar.caption("You can proceed to fill the form.")
 except Exception as e:
     st.sidebar.error(f"Failed to load Excel template: {e}")
 
-import pandas as pd
-import io
-import os
-from datetime import datetime
-from num2words import num2words
-import re
-
-# ✅ First Streamlit command
-user = st.sidebar.text_input("Enter Your Name (used for saving backups)", value="demo_user")
-is_admin = st.sidebar.checkbox("View All Backups (Admin Only)")
-
-# === Configuration ===
-
-details_sheet = "DETAILS"
+# === Dropdown Options ===
 custom_dropdowns = {
-    "Payment stage:": ["Stage Payment", "Final Payment", "Retention"],
+    "Payment stage:": ["Stage Payment", "Final Payment", "Retention Payment"],
     "Percentage of Advance payment? (as specified in the award letter)": ["0%", "25%", "40%", "50%", "60%", "70%"],
     "Is there 5% retention?": ["0%", "5%"],
     "Vat": ["0%", "7.5%"],
-    "Address line 1": ["The Director", "The Chairman", "The Permanent Secretary", "The General Manager", "The Honourable Commissioner", "The Special Adviser"]
+    "Physical stage of work": ["Ongoing", "Completed"],
+    "Address line 1": ["The Director,", "The Chairman,", "The Permanent Secretary,", "The General Manager,", "The Honourable Commissioner,", "The Special Adviser,"]
 }
 
-# === Folder Handling ===
-backup_root = "backups"
-user_backup_dir = os.path.join(backup_root, user)
-os.makedirs(user_backup_dir, exist_ok=True)
-
-# === Utility Functions ===
+# === Load Field Definitions ===
+@st.cache_data
 def load_field_structure():
     df = pd.read_csv("Grouped_Field_Structure_Clean.csv")
     grouped = {}
@@ -69,15 +141,11 @@ def load_field_structure():
         grouped.setdefault(group, []).append(field)
     return grouped
 
-def load_template(project_count):
-    return load_workbook(template_paths[project_count])
+field_structure = load_field_structure()
+template_path = template_paths[project_count]
+column_map = project_columns[project_count]
 
-def write_to_details(ws, data_dict, column_map):
-    for proj, entries in data_dict.items():
-        col = column_map[proj]
-        for row_idx, value in entries.items():
-            ws[f"{col}{int(row_idx)}"] = value
-
+# === Utility Functions ===
 def calculate_amount_due(inputs, proj, show_debug=False):
     def get(row):
         val = str(inputs.get(f"{row}_P{proj}", "0")).replace(",", "").replace("%", "").strip().lower()
@@ -111,46 +179,88 @@ def calculate_amount_due(inputs, proj, show_debug=False):
         st.write(f"VAT: ₦{vat:,.2f}")
         st.write(f"Refund: ₦{advance_refund_amount:,.2f}")
         st.write(f"Previous Payment: ₦{previous_payment:,.2f}")
-        
+
     return amount_due
 
 def amount_in_words_naira(amount):
-    naira = int(amount)
-    kobo = int(round((amount - naira) * 100))
-    words = f"{num2words(naira, lang='en').capitalize()} naira"
-    if kobo > 0:
-        words += f", {num2words(kobo, lang='en')} kobo"
-    return words.replace("-", " ")
+    try:
+        naira = int(float(amount))
+        kobo = int(round((float(amount) - naira) * 100))
+        words = f"{num2words(naira, lang='en').capitalize()} naira"
+        if kobo > 0:
+            words += f", {num2words(kobo, lang='en')} kobo"
+        return words.replace("-", " ")
+    except:
+        return "Invalid amount"
 
-def save_data_locally(all_inputs, filename=None):
-    df = pd.DataFrame([all_inputs])
+def write_to_details(ws, data_dict, column_map):
+    currency_rows = {"10", "11", "13", "15", "18"}
+    for proj, entries in data_dict.items():
+        col = column_map[proj]
+        for row_idx, value in entries.items():
+            cell = ws[f"{col}{int(row_idx)}"]
+            if str(row_idx) in currency_rows:
+                try:
+                    val = str(value).replace("\u20a6", "").replace(",", "").strip()
+                    cell.value = float(val) if "." in val else int(val)
+                    cell.number_format = '"\u20a6"#,##0.00'
+                except:
+                    cell.value = value
+            else:
+                cell.value = value
+
+def save_data_locally(inputs, filename=None):
+    inputs = dict(inputs)
+    df = pd.DataFrame([inputs])
     df.to_csv("saved_form_data.csv", index=False)
+
+    # Only name new backups if filename is not provided
     if filename:
         df.to_csv(os.path.join(user_backup_dir, filename), index=False)
     else:
-        contractor = re.sub(r'[^\w\-]', '_', str(all_inputs.get("7_P1", "")).strip()) or "no_contractor"
-        project = re.sub(r'[^\w\-]', '_', str(all_inputs.get("5_P1", "")).strip()) or "no_project"
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        backup_name = f"{contractor}_{project}_{timestamp}.csv"
-        df.to_csv(os.path.join(user_backup_dir, backup_name), index=False)
+        contractor = str(inputs.get("5_P1", "")).strip()
+        project = str(inputs.get("7_P1", "")).strip()
 
-# === Start App ===
-template_path = template_paths[project_count]
-column_map = project_columns[project_count]
-field_structure = load_field_structure()
+        # Use 'unspecified' only if values are truly empty
+        contractor_clean = re.sub(r'[^\w\-]', '_', contractor) if contractor else "unspecified_contractor"
+        project_clean = re.sub(r'[^\w\-]', '_', project) if project else "unspecified_project"
 
+        timestamp = datetime.now(ZoneInfo("Africa/Lagos")).strftime("%Y-%m-%d %H:%M:%S")
+        filename = f"{contractor_clean}_{project_clean}_{timestamp}.csv"
+        df.to_csv(os.path.join(user_backup_dir, filename), index=False)
+
+def sync_snapshot_to_local(user, snapshot_dict):
+    contractor = str(snapshot_dict.get("5_P1", "")).strip()
+    project = str(snapshot_dict.get("7_P1", "")).strip()
+
+    contractor_clean = re.sub(r"[^\w\-]", "_", contractor) if contractor else "unspecified_contractor"
+    project_clean = re.sub(r"[^\w\-]", "_", project) if project else "unspecified_project"
+
+    timestamp = datetime.now(ZoneInfo("Africa/Lagos")).strftime("%Y-%m-%d %H:%M:%S")
+    filename = f"{contractor_clean}_{project_clean}_{timestamp}_synced.csv"
+    df = pd.DataFrame([snapshot_dict])
+    df.to_csv(os.path.join(user_backup_dir, filename), index=False)
+    
+
+# === Restore from Backup or Load Fresh ===
 if "restored_inputs" in st.session_state:
-    all_inputs = st.session_state.pop("restored_inputs")
+    restored = st.session_state.pop("restored_inputs")
+    for k, v in restored.items():
+        if pd.isna(v):
+            v = ""
+        else:
+            v = str(v)
+        st.session_state[k] = v
+    all_inputs = restored.copy()
 else:
-    all_inputs = {}
+    # If fields already in session_state from auto-save or fresh form
+    all_inputs = {k: v for k, v in st.session_state.items() if "_P" in k}
 
 # === Form Entry ===
 for group, fields in field_structure.items():
     with st.expander(group, expanded=False):
         for row, label, _ in fields:
             for proj in range(1, project_count + 1):
-
-                # Skip repeated groups for Project 2 & 3
                 if proj > 1 and group in ["Date of Approval", "Address Line", "Signatories"]:
                     continue
                 if proj > 1 and group == "Folio References" and label != "Inspection report File number":
@@ -158,92 +268,87 @@ for group, fields in field_structure.items():
 
                 key = f"{row}_P{proj}"
                 default = all_inputs.get(key, "")
+                show_label = label if (proj == 1 or project_count == 1) else f"{label} – Project {proj}"
 
-                # ✅ Label formatting: no suffix for shared fields
-                if proj == 1 and group in ["Date of Approval", "Address Line", "Signatories", "Folio References"] and label != "Inspection report File number":
-                    label_suffix = label
-                else:
-                    label_suffix = f"{label} – Project {proj}" if project_count > 1 else label
-
-                widget_key = f"{group}_{label}_{proj}_{row}"
-
-                # === Row 19: skip — handled automatically
-                if row == "19":
-                    continue
-
-                # === Row 18: Calculated Amount Due (with debug + read-only field)
-                elif row == "18" and group == "Prepayment Certificate Details":
+                if row == "18":
                     amount = calculate_amount_due(all_inputs, proj, show_debug=True)
                     amount_words = amount_in_words_naira(amount)
-
                     all_inputs[key] = f"{amount:,.2f}"
                     all_inputs[f"19_P{proj}"] = amount_words
-                    st.session_state[key] = all_inputs[key]
                     st.session_state[f"19_P{proj}"] = amount_words
-
-                    st.success(f"Calculated Amount Due: ₦{all_inputs[key]}")
+                    st.markdown(f"**{show_label}: ₦{amount:,.2f}**")
                     st.caption(f"In Words: {amount_words}")
-                    st.text_input(label_suffix, value=all_inputs[key], key=widget_key, disabled=True)
-                    continue  # skip to next field
+                    continue
 
-                # === Dropdowns
+                elif row == "19":
+                    value = all_inputs.get(key, "")
+                    continue
+
                 elif label in custom_dropdowns:
                     options = custom_dropdowns[label]
-                    default_index = options.index(default) if default in options else 0
-                    all_inputs[key] = st.selectbox(label_suffix, options, index=default_index, key=widget_key)
+                    if key not in st.session_state or not isinstance(st.session_state[key], str):
+                        st.session_state[key] = default if default in options else options[0]
+                    all_inputs[key] = st.selectbox(show_label, options, key=key)
 
-                # === Text Input
                 else:
-                    all_inputs[key] = st.text_input(label_suffix, value=default, key=widget_key)
+                    if key not in st.session_state or not isinstance(st.session_state[key], str):
+                        st.session_state[key] = default if isinstance(default, str) else ""
+                    all_inputs[key] = st.text_input(show_label, key=key)
 
-
-
-                # 🧮 Inline Debug Panel (only for Prepayment Certificate Details)
-                if group == "Prepayment Certificate Details" and row == "18":
-                    st.markdown(f"#### Debug Info – Project {proj}")
-                    _amount = calculate_amount_due(st.session_state, proj, show_debug=True)
-                    st.session_state[key] = f"{_amount:,.2f}"
-                    _words = amount_in_words_naira(_amount)
-                    st.session_state[f"19_P{proj}"] = _words
-                    st.success(f"Calculated Amount Due: ₦{st.session_state[key]}")
-                    st.caption(f"In Words: {_words}")
-                    all_inputs[key] = st.session_state[key]
-
-                elif row == "18":
-                    amount = calculate_amount_due(all_inputs, proj, show_debug=True)
-                    all_inputs[key] = f"{amount:,.2f}"
-                    all_inputs[f"19_P{proj}"] = amount_in_words_naira(amount)
-                    st.info(f"Amount Due: ₦{all_inputs[key]}")
-                    st.caption(f"Amount in Words: {all_inputs[f'19_P{proj}']}")
-               
-
-# === Save & Download ===
-contractor = all_inputs.get("7_P1", "Contractor")
-project = all_inputs.get("5_P1", "Project Title")
+# === Save and Download Buttons ===
+contractor = str(all_inputs.get("5_P1", "")).strip()
+project = str(all_inputs.get("7_P1", "")).strip()
 filename = st.session_state.get("loaded_filename")
 
+# === Save Snapshot to Google Sheet and Local ===
 if st.button("💾 Save Offline"):
-    save_data_locally(all_inputs, filename)
+    inputs_to_save = {k: v for k, v in st.session_state.items() if "_P" in k}
+    save_data_locally(inputs_to_save, filename)  # Save as CSV locally
+    save_snapshot_to_gsheet(st.session_state["current_user"], inputs_to_save)  # Save full snapshot to Google Sheet
+    st.success("Form saved locally and backed up to Google Sheet.")
 
 if st.button("📥 Download Excel"):
     wb = load_template(project_count)
     ws = wb[details_sheet]
     data_to_write = {p: {} for p in range(1, project_count + 1)}
-    for key, value in all_inputs.items():
+    for key, value in st.session_state.items():
         if "_P" in key:
-            row, proj = key.split("_P")
-            data_to_write[int(proj)][row] = value
+            parts = key.split("_P")
+            if len(parts) == 2 and parts[1].isdigit():
+                row, proj = parts
+                data_to_write[int(proj)][row] = value
+                
     write_to_details(ws, data_to_write, column_map)
     buffer = io.BytesIO()
     wb.save(buffer)
     buffer.seek(0)
-    st.download_button("📂 Download Filled Excel", buffer, file_name=f"{project}_by_{contractor}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    st.download_button(
+        "📂 Download Filled Excel",
+        buffer,
+        file_name=f"{project}_by_{contractor}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+# === Autosave to Google Sheet if form changes ===
+current_inputs = {k: v for k, v in st.session_state.items() if "_P" in k}
+
+# Detect changes since last autosave
+if st.session_state.get("last_autosaved") != current_inputs:
+    with st.spinner("Autosaving..."):
+        save_snapshot_to_gsheet(st.session_state["current_user"], current_inputs)  # new
+        st.session_state["last_autosaved"] = current_inputs.copy()
+        st.toast("Autosaved to Google Sheet ✅")
 
 # === Backup Listing ===
-st.sidebar.markdown("### 🔄 Manage Saved Backups")
-all_user_dirs = [user_backup_dir] if not is_admin else [os.path.join(backup_root, u) for u in os.listdir(backup_root) if os.path.isdir(os.path.join(backup_root, u))]
-all_backups = []
+st.sidebar.markdown("### 🔄 Manage Local Saved Backups - Temporary")
+search_term = st.sidebar.text_input("🔍 Search Backups")
 
+# Show all or per-user backups
+all_user_dirs = [user_backup_dir] if not is_admin else [
+    os.path.join(backup_root, u) for u in os.listdir(backup_root)
+    if os.path.isdir(os.path.join(backup_root, u))
+]
+all_backups = []
 for user_dir in all_user_dirs:
     for f in os.listdir(user_dir):
         if f.endswith(".csv"):
@@ -251,49 +356,100 @@ for user_dir in all_user_dirs:
             title = f"{os.path.basename(user_dir)} | {f.replace('.csv', '').replace('_', ' ')}"
             all_backups.append((path, title))
 
-search_term = st.sidebar.text_input("🔍 Search Backups")
+# Filter
 filtered_backups = [b for b in all_backups if search_term.lower() in b[1].lower()]
 
 for i, (path, title) in enumerate(filtered_backups):
-    with st.sidebar.expander(title):
+    with st.sidebar.expander(title, expanded=False):
         col1, col2 = st.columns([2, 1])
         with col1:
             if st.button("Load", key=f"load_{i}"):
-                data = pd.read_csv(path).to_dict(orient="records")[0]
-                st.session_state["restored_inputs"] = data
-                st.session_state["loaded_filename"] = os.path.basename(path)
-                st.rerun()
+                try:
+                    df = pd.read_csv(path)
+                    if df.empty:
+                        st.warning("Backup is empty.")
+                    else:
+                        st.session_state["restored_inputs"] = df.to_dict(orient="records")[0]
+                        st.session_state["loaded_filename"] = os.path.basename(path)
+                        st.success("Backup loaded successfully.")
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Failed to load backup: {e}")
         with col2:
             if st.button("🗑️", key=f"delete_{i}"):
                 os.remove(path)
                 st.rerun()
 
+# Reset form
 if st.sidebar.button("➕ Start New Blank Form"):
-    if "loaded_filename" in st.session_state:
-        del st.session_state["loaded_filename"]
-    st.session_state["restored_inputs"] = {}
+    for k in list(st.session_state.keys()):
+        if "_P" in k or "loaded_filename" in k or "_proj" in k:
+            del st.session_state[k]
     st.rerun()
 
+# === Restore from Google Sheet Snapshots ===
+st.sidebar.markdown("### 🗃️ Restore from Google Sheet Snapshots")
 
-# === 📊 Summary Dashboard ===
+try:
+    gc = get_gsheet_client()
+    if gc:
+        sheet = gc.open("PC_Snapshots").sheet1
+        df = pd.DataFrame(sheet.get_all_records())
+
+        current_user = st.session_state.get("current_user", "").strip()
+        user_snapshots = df[df["user"].str.lower() == current_user.lower()]
+
+        if user_snapshots.empty:
+            st.sidebar.info("No snapshots found for your name.")
+        else:
+            timestamps = sorted(user_snapshots["timestamp"].unique().tolist(), reverse=True)
+            selected_timestamp = st.sidebar.selectbox("Select a Snapshot", timestamps)
+
+            col1, col2, col3 = st.sidebar.columns(3)
+
+            with col1:
+                if st.button("🔄 Load Snapshot"):
+                    row = user_snapshots[user_snapshots["timestamp"] == selected_timestamp].iloc[0]
+                    restored_data = json.loads(row["json_data"])
+                    st.session_state["restored_inputs"] = restored_data
+                    st.session_state["loaded_filename"] = f"restored_from_snapshot_{selected_timestamp.replace(' ', '_')}.csv"
+                    st.sidebar.success("Snapshot loaded from Google Sheet.")
+                    st.rerun()
+
+            with col2:
+                if st.button("🗑️ Delete Snapshot"):
+                    if delete_snapshot_from_gsheet(current_user, selected_timestamp):
+                        st.sidebar.success("Snapshot deleted successfully.")
+                        st.rerun()
+
+            with col3:
+                if st.button("💾 Save to Local"):
+                    row = user_snapshots[user_snapshots["timestamp"] == selected_timestamp].iloc[0]
+                    restored_data = json.loads(row["json_data"])
+                    sync_snapshot_to_local(current_user, restored_data)
+                    st.sidebar.success("Snapshot saved as local backup.")
+
+except Exception as e:
+    st.sidebar.error(f"Snapshot restore failed: {e}")
+    
+
+# === Summary Dashboard ===
 st.markdown("---")
-st.header("📊 Summary of All Projects")
-
+st.header("📊 Summary of all Projects")
 total_due = 0
 summary_data = []
-
 for proj in range(1, project_count + 1):
     try:
-        val = st.session_state.get(f"18_P{proj}", "0").replace(",", "")
+        val = all_inputs.get(f"18_P{proj}", "0").replace(",", "")
         amt = float(val)
         total_due += amt
         summary_data.append((f"Project {proj}", amt))
     except:
         continue
 
-if summary_data:
-    df_summary = pd.DataFrame(summary_data, columns=["Project", "Amount Due"])
-    st.dataframe(df_summary)
-    st.subheader(f"**Total Amount Due: ₦{total_due:,.2f}**")
-else:
-    st.info("No amount data available to summarize.")
+    if summary_data:
+        df_summary = pd.DataFrame(summary_data, columns=["Project", "Amount Due"])
+        st.dataframe(df_summary)
+        st.subheader(f"**Total Amount Due: ₦{total_due:,.2f}**")
+    else:
+        st.info("No amount data available to summarize.")
