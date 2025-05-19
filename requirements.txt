@@ -6,4 +6,5 @@ openpyxl
 python-docx
 gspread
 oauth2client
+pyarrow>=12.0.0
 
